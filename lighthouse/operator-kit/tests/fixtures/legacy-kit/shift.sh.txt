@@ -1,0 +1,258 @@
+#!/usr/bin/env bash
+# The operator's shift command: "start shift" brings everything up, "end shift" takes it all down and the operator
+# does nothing until the next start.
+#   bash shift.sh start | stop | status | clock | claim <code> | gate <mode>|status | mark <event> acted|noise
+#                 | kill-watchers | outbox start|stop|restart|status
+# claim:  once, at setup: exchanges a one-time code the captain gives you for this machine's token, written into
+# LH-TOKEN.txt
+#         in this folder and in the WSL twin. The token is never shown.
+# start:  prints the clock (configured zone, from Windows' own zone tables) and brings the outbox up (hidden, one
+#         instance per home, through Start-Collector.ps1 beside this script).
+# stop:   takes the outbox down.   status: says whether it is up.   clock: the time in the configured zone.
+# The watchers are Monitors inside the operator's session, one each as the advisors have always run them, so the
+# operator arms and stops those itself; this command touches only the outbox and the clock.
+# gate:   the wake gate's mode (gate.cjs, piped after a watcher): off | rules | observe | shadow | hold, live, no
+#         restart; `gate status` reads its heartbeat. mark: a hand correction for the measuring week (`gate-report.py`).
+# kill-watchers: stops every watcher, route and gate process of this home (Kill-Watchers.ps1: the home's own pid files
+#         and gate registry, and shells whose command line names the home; never by parentage, which on Git Bash can
+#         kill a live sweep). `stop` does the same after taking the outbox down; `start` clears leftovers first.
+#         Mid-shift, the outbox alone: `outbox restart` (a `stop`/`start` pair would take the watchers down with it).
+set -u
+# typing `bash` in PowerShell starts WSL's bash, where python and powershell are not the Windows ones
+if [ -n "${WSL_DISTRO_NAME:-}" ] || grep -qi microsoft /proc/version 2>/dev/null; then
+  echo "shift.sh runs in Git Bash on the Windows side; this is WSL's bash." \
+    "Open Git Bash, or from PowerShell run:  & 'C:\Program Files\Git\bin\bash.exe' shift.sh ${*:-start}" >&2
+  exit 2
+fi
+# SHIFT_HOME: set when update re-runs this script from a copy of itself (see update)
+HERE="${SHIFT_HOME:-$(cd "$(dirname "$0")" && pwd)}"
+# stamped by the installer: looking the name up by its key would fail, since the installer replaces the key too
+MACHINE="__MACHINE_NAME__"
+SERVER="__BOARD_SERVER__"; DISTRO="__WSL_DISTRO__"; WSL_HOME="__OPERATOR_WSL_DIR__"
+PS="powershell -NoProfile -ExecutionPolicy Bypass"
+STARTER="$(cygpath -w "$HERE/Start-Collector.ps1" 2>/dev/null || echo "$HERE/Start-Collector.ps1")"
+clock() {
+  local clock_command="[System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId("
+  clock_command+="(Get-Date), '__WINDOWS_TIME_ZONE__').ToString('h:mm tt') + ' __TIME_ZONE__'"
+  $PS -Command "$clock_command" | tr -d '\r'
+}
+# the steward's waker, only where it is installed: Start-Steward.ps1 says "no steward" elsewhere
+steward() {
+  local tmp; tmp="$(mktemp)"
+  $PS -File "$(cygpath -w "$HERE/Start-Steward.ps1" 2>/dev/null || echo "$HERE/Start-Steward.ps1")" \
+    -Action "$1" > "$tmp" 2>&1 < /dev/null
+  tr -d '\r' < "$tmp"; rm -f "$tmp"; }
+# through a file, not a pipe: the hidden collector inherits PowerShell's stdout handle, and a pipe would then wait for
+# the collector itself to exit, so start would hang
+outbox() {
+  local tmp; tmp="$(mktemp)"; $PS -File "$STARTER" -Action "$1" > "$tmp" 2>&1 < /dev/null
+  tr -d '\r' < "$tmp"; rm -f "$tmp"; }
+# "started" is not running: a collector that dies at once (on an unreadable cursor, say) says so here, with its
+# error, instead of leaving the board silent
+outbox_alive() {
+  sleep 4; outbox status | grep -q '^running' && return 0
+  echo "outbox: NOT RUNNING: the collector stopped right after it started; nothing you write reaches the board." \
+    "Its last error:"
+  tail -n 6 "$HERE/collector.err" 2>/dev/null | tr -d '\r' | sed 's/^/  /'; }
+kill_watchers() {   # $1 = -OrphansOnly to clear only what a stopped Monitor left running
+  local ps1; ps1="$(cygpath -w "$HERE/Kill-Watchers.ps1" 2>/dev/null || echo "$HERE/Kill-Watchers.ps1")"
+  if [ -f "$HERE/lh.pid" ] && [ "${1:-}" != "-OrphansOnly" ]; then
+    local sp; sp="$(tr -d '\r\n' < "$HERE/lh.pid")"
+    kill "$sp" 2>/dev/null && echo "watchers: stopped the sweep (pid $sp, from lh.pid)"
+  fi
+  [ -f "$HERE/Kill-Watchers.ps1" ] || { echo "watchers: Kill-Watchers.ps1 is not installed here"; return 0; }
+  $PS -File "$ps1" -OperatorHome "$(cygpath -w "$HERE" 2>/dev/null || echo "$HERE")" ${1:-} < /dev/null 2>&1 |
+    tr -d '\r' | sed 's/^/watchers: /'; }
+# Windows will not let the installer replace a file a running Monitor or this very script holds open; the installer
+# then writes <name>.new, and this swaps it in once the file is free. Runs at every start and at the end of every
+# update.
+swap_new() {
+  local n f; for n in "$HERE"/*.new "$HERE"/wsl/*.new; do [ -f "$n" ] || continue; f="${n%.new}"
+    if mv -f "$n" "$f" 2>/dev/null; then echo "swapped in $(basename "$f") (was pending from an update)"
+    else echo "still pending: $(basename "$f") is open; stop the Monitor that runs it and run: bash shift.sh start"
+    fi; done; }
+rules() {   # the rules, printed at every start shift from the installed brief, so they are known exactly
+  # the home's protocol, from its token files: LH-COLLECTOR-TOKEN.txt is tool mode (the collector reports with its own
+  # token), LH-SHADOW-TOKEN.txt is a shadow trial (lines still answer the captain; the tools only dry-run),
+  # neither is lines
+  local mode=lines rc=0
+  [ -f "$HERE/LH-SHADOW-TOKEN.txt" ] && mode=shadow
+  [ -f "$HERE/LH-COLLECTOR-TOKEN.txt" ] && mode=tools
+  # is the session running this writing in the configured folder? One in another folder goes silent while every check
+  # stays green. LH_SKIP_HERE=1 when shift.sh is run outside the operator's own session
+  local here_out here_rc=0
+  if [ "${LH_SKIP_HERE:-}" != 1 ]; then
+    here_out="$(node "$(cygpath -w "$HERE/lighthouse-mcp.cjs" 2>/dev/null || echo "$HERE/lighthouse-mcp.cjs")" here \
+      < /dev/null 2>&1)"; here_rc=$?
+  fi
+  if [ "$here_rc" != 0 ]; then
+    printf '%s\n' "$here_out" | tr -d '\r'
+    if [ "$mode" = tools ]; then
+      echo "TOOL MODE REFUSED: this session is not where the board's tools and your collector look." \
+        "Tell the captain in your chat; start the operator in the configured folder."
+      return 3
+    fi
+    echo "WARNING: from this folder your lines do not reach the board. Tell the captain in your chat."
+  fi
+  if [ "$mode" = tools ]; then
+    [ -f "$HERE/LH-SHADOW-TOKEN.txt" ] &&
+      echo "TOOLS: LH-SHADOW-TOKEN.txt is still here beside the tool-mode tokens, so your tools only dry-run;" \
+        "the chief developer removes it at the switch."
+    [ -f "$HERE/OPERATOR-BRIEF-TOOLS.md" ] && {
+      echo; echo "Tool mode, in short (OPERATOR-BRIEF-TOOLS.md):"
+      sed -n '/<!-- tool-rules -->/,/<!-- \/tool-rules -->/p' "$HERE/OPERATOR-BRIEF-TOOLS.md" | grep -v '^<!--' |
+        tr -d '\r'; }
+  elif [ -f "$HERE/OPERATOR-BRIEF.md" ]; then
+    echo; echo "The line, in short (OPERATOR-BRIEF.md):"
+    sed -n '/<!-- line-rules -->/,/<!-- \/line-rules -->/p' "$HERE/OPERATOR-BRIEF.md" | grep -v '^<!--' | tr -d '\r'
+    [ "$mode" = shadow ] &&
+      echo "SHADOW TRIAL: answer the captain with lines. For each act, also make its lighthouse" \
+        "tool call (OPERATOR-BRIEF-TOOLS.md, Shadow first); it only dry-runs."
+  fi
+  [ "$mode" = lines ] && return 0
+  # the tools must be registered at local scope for this operator's session, with the compaction hooks
+  # (docs/tool-calls.md §3)
+  echo
+  node "$(cygpath -w "$HERE/lighthouse-mcp.cjs" 2>/dev/null || echo "$HERE/lighthouse-mcp.cjs")" check \
+    < /dev/null 2>&1 | tr -d '\r'; rc=${PIPESTATUS[0]}
+  [ "$rc" = 0 ] && return 0
+  if [ "$mode" = tools ]; then
+    echo "TOOL MODE REFUSED: the tools are missing; the board gets nothing. Tell the captain in chat" \
+      "that your tools are not ready, and work no other route until the chief developer fixes it."
+  else
+    echo "SHADOW NOT READY: use lines; tell the captain the tool trial cannot run this" \
+      "shift."
+  fi
+  return 3; }
+gate() {
+  case "${1:-status}" in
+    off|rules|observe|shadow|hold)
+      printf '%s\n' "$1" > "$HERE/gate-mode"
+      echo "gate: $1 (gate-mode written; a running gate switches within seconds)"
+      ;;
+    status)
+      echo "gate mode file: $(tr -d '\r\n' < "$HERE/gate-mode" 2>/dev/null ||
+        echo "(none; the installed default applies)")"
+      [ -f "$HERE/gate-heartbeat.json" ] || { echo "gate heartbeat: none (no gate has run in this home)"; return 0; }
+      python - "$HERE/gate-heartbeat.json" <<'PYHB'
+import json, sys, datetime
+h = json.load(open(sys.argv[1], encoding="utf-8"))
+t = datetime.datetime.fromisoformat(h["t"].replace("Z", "+00:00"))
+age = int((datetime.datetime.now(datetime.timezone.utc) - t).total_seconds() // 60)
+print(f"gate heartbeat: {age} min ago, mode {h.get('mode')} (effective {h.get('effective')}), pid {h.get('pid')}")
+print(f"  since start {h.get('started','')[:16]}: judged {h.get('judged',0)}, woke {h.get('woke',0)}, "
+      f"held {h.get('held',0)} ({h.get('heldNow',0)} waiting now), dropped {h.get('dropped',0)}, "
+      f"passed {h.get('passed',0)}, failed {h.get('failed',0)}")
+if h.get("failOpenSince"): print(f"  FAIL-OPEN since {h['failOpenSince'][:16]}: every line wakes; Jev is not answering")
+if h.get("offUntil"): print(f"  release window: off until {h['offUntil'][:16]}")
+PYHB
+      ;;
+    *) echo "usage: bash shift.sh gate off|rules|observe|shadow|hold|status" >&2; return 2 ;;
+  esac; }
+case "${1:-}" in
+  clock)  clock ;;
+  gate)   gate "${2:-status}" ;;
+  mark)   case "${3:-}" in
+            acted|noise)
+              printf '{"id":"%s","mark":"%s","at":"%s"}\n' "$2" "$3" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                >> "$HERE/gate-marks.jsonl"
+              echo "marked $2 $3" ;;
+            *) echo "usage: bash shift.sh mark <event id> acted|noise" >&2; exit 2 ;;
+          esac ;;
+  start)  kill_watchers; swap_new; echo "clock: $(clock)"; echo "outbox: $(outbox start)"; outbox_alive
+          echo "steward: $(steward start)"; rules ;;
+  outbox) case "${2:-status}" in
+            start|stop|status) echo "outbox: $(outbox "$2")" ;;
+            restart) echo "outbox: $(outbox stop)"; sleep 1; echo "outbox: $(outbox start)"; outbox_alive ;;
+            *) echo "usage: bash shift.sh outbox start|stop|restart|status" >&2; exit 2 ;; esac ;;
+  # the stop time: the next start's collector skips untagged prose written while the shift was off
+  stop)   echo "outbox: $(outbox stop)"; echo "steward: $(steward stop)"
+          date -u +%Y-%m-%dT%H:%M:%SZ > "$HERE/shift-stopped.txt"; kill_watchers; echo "clock: $(clock)" ;;
+  kill-watchers) kill_watchers ;;
+  status) echo "outbox: $(outbox status)"; echo "steward: $(steward status)"; echo "clock: $(clock)" ;;
+  steward) case "${2:-status}" in   # the steward's waker, where this machine has one: kept running like the collector
+      start|stop|status) echo "steward: $(steward "$2")" ;;
+      restart) echo "steward: $(steward stop)"; echo "steward: $(steward start)" ;;
+      *) echo "usage: bash shift.sh steward start|stop|status|restart" >&2; exit 2 ;; esac ;;
+  # when the chief developer says the kit changed: pull the repository this home was installed from, re-install into
+  # this home from its own config, refresh the WSL half
+  update)
+    # run from a copy, so this file is not open while the installer replaces it (Windows refuses otherwise)
+    if [ -z "${SHIFT_HOME:-}" ]; then
+      tmp="$(mktemp)"; cp "$0" "$tmp"; SHIFT_HOME="$HERE" exec bash "$tmp" update; fi
+    repo="$(sed -n 2p "$HERE/REPO.txt" 2>/dev/null | tr -d '\r')"
+    [ -d "$repo" ] || { echo "REPO.txt names no repository folder; run the installer by hand" >&2; exit 2; }
+    mcp_before="$(sha256sum "$HERE/lighthouse-mcp.cjs" "$HERE/toolcalls-spec.json" \
+      "$HERE/lighthouse-mcp.cjs.new" "$HERE/toolcalls-spec.json.new" 2>/dev/null)"
+    git -C "$repo" pull --ff-only 2>&1 | tail -1
+    machine="$(printf '%s' "$MACHINE" | tr 'A-Z' 'a-z')"
+    # the repository's config for this machine brings new keys; this home's typed values (the board address) are kept
+    if [ -n "$machine" ] && [ -f "$repo/machines/$machine/operator-config.json" ]; then
+      MSYS_NO_PATHCONV=1 python "$repo/lighthouse/operator-kit/install.py" \
+        --config "$(cygpath -w "$repo/machines/$machine/operator-config.json")" \
+        --keep-from "$(cygpath -w "$HERE/config.json")" --out "$(cygpath -w "$HERE")" | tail -2
+    else
+      MSYS_NO_PATHCONV=1 python "$repo/lighthouse/operator-kit/install.py" \
+        --config "$(cygpath -w "$HERE/config.json")" --out "$(cygpath -w "$HERE")" | tail -2
+    fi
+    # C:\Users\x\lighthouse-operator -> /mnt/c/Users/x/lighthouse-operator
+    mnt="$(cygpath -w "$HERE" | sed -e 's|\\|/|g' -e 's|^\([A-Za-z]\):|/mnt/\L\1|')"
+    MSYS_NO_PATHCONV=1 wsl -d "$DISTRO" -- bash -c "mkdir -p '$WSL_HOME' && cp -r '$mnt/wsl/.' '$WSL_HOME/' && "\
+"chmod +x '$WSL_HOME'/*.sh 2>/dev/null; echo 'WSL half refreshed at $WSL_HOME'" 2>/dev/null ||
+      echo "the WSL copy failed; copy wsl/* into $WSL_HOME by hand"
+    swap_new
+    # a running collector keeps the old code until it restarts: restart it now
+    if outbox status | grep -q '^running'; then
+      echo "outbox: $(outbox stop)"; echo "outbox: $(outbox start)"; outbox_alive; fi
+    # the steward's waker too, or it runs the old code beside the new brief; a job it was on goes back to the board's
+    # queue and runs again
+    if steward status | grep -q '^running'; then echo "steward: $(steward stop)"; echo "steward: $(steward start)"; fi
+    mcp_after="$(sha256sum "$HERE/lighthouse-mcp.cjs" "$HERE/toolcalls-spec.json" \
+      "$HERE/lighthouse-mcp.cjs.new" "$HERE/toolcalls-spec.json.new" 2>/dev/null)"
+    if [ "$mcp_before" != "$mcp_after" ]; then
+      echo "Lighthouse tools changed: reconnect the lighthouse MCP server with /mcp, or restart the session." \
+        "A running session keeps the old tools until you do."
+    fi
+    ;;
+  claim)
+    code="${2:-}"; [ -n "$code" ] || { echo "usage: bash shift.sh claim <code>" >&2; exit 2; }
+    MSYS_NO_PATHCONV=1 python - "$SERVER" "$code" "$(cygpath -w "$HERE/LH-TOKEN.txt")" "$DISTRO" "$WSL_HOME" <<'PY'
+import json, os, subprocess, sys, urllib.request, urllib.error
+server, code, out, distro, wsl_home = sys.argv[1:6]
+req = urllib.request.Request(server.rstrip("/") + "/api/claim", data=json.dumps({"code": code}).encode(),
+                             headers={"Content-Type": "application/json"}, method="POST")
+try:
+    with urllib.request.urlopen(req, timeout=20) as r: j = json.loads(r.read().decode())
+except urllib.error.HTTPError as e:
+    try: msg = json.loads(e.read().decode()).get("error", "")
+    except Exception: msg = ""
+    sys.exit("the board refused the code: " + (msg or str(e.code)))
+tok = j.get("token", "")
+if not tok: sys.exit("the board returned no token")
+# a switch to tools: the shadow and collector tokens have files of their own, on the Windows side only
+kind = j.get("kind", "lines")
+# the advice steward's token sits beside stwake.cjs, which alone reads it
+if kind in ("shadow", "collector", "steward"):
+    out = os.path.join(os.path.dirname(out), {"shadow": "LH-SHADOW-TOKEN.txt", "collector": "LH-COLLECTOR-TOKEN.txt",
+                                              "steward": "LH-STEWARD-TOKEN.txt"}[kind])
+with open(out, "w", encoding="utf-8", newline="\n") as f: f.write(tok + "\n")
+try: os.chmod(out, 0o600)
+except Exception: pass
+try:   # Windows ignores that mode; the ACL is what counts there: this user only
+    if os.name == "nt":
+        subprocess.run(["icacls", out, "/inheritance:r", "/grant:r", os.environ.get("USERNAME", "") + ":F"],
+                       capture_output=True)
+except Exception: pass
+if kind in ("shadow", "collector", "steward"):
+    print(kind + " token placed for " + j.get("name", "?") + " in " + out); sys.exit(0)
+r = subprocess.run(["wsl", "-d", distro, "--", "bash", "-c",
+                    "umask 077 && mkdir -p '" + wsl_home + "' && cat > '" + wsl_home + "/LH-TOKEN.txt'"],
+                   input=(tok + "\n").encode(), capture_output=True)
+print("token placed for " + j.get("name", "?") + " in " + out
+      + (" and in " + wsl_home + "/LH-TOKEN.txt" if r.returncode == 0
+         else "; the WSL copy failed: " + r.stderr.decode(errors="replace").strip()))
+PY
+    ;;
+  *)      echo "usage: bash shift.sh start|stop|status|clock|claim <code>|gate <mode>|status|mark <event>" \
+            "acted|noise|kill-watchers|outbox start|stop|restart|status" >&2; exit 2 ;;
+esac

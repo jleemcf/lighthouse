@@ -1,0 +1,100 @@
+{
+  "_": "The wake gate's rules (gate.cjs). Regular expressions, case-insensitive for words. An operator's own additions go in gate-rules.local.json beside the gate, which an update never touches; keys there add to these. Tuned from the measuring week.",
+  "wake": [
+    "fail",
+    "failed",
+    "failure",
+    "failing",
+    "error",
+    "errors",
+    "refus\\w*",
+    "blocked",
+    "block",
+    "stop",
+    "abort\\w*",
+    "stuck",
+    "question",
+    "dialog",
+    "needs-decision",
+    "decision",
+    "approve",
+    "approval",
+    "rollback",
+    "revert",
+    "production",
+    "prod",
+    "promotion",
+    "promote",
+    "promoted",
+    "migration",
+    "migrate",
+    "deploy",
+    "deployed",
+    "deployment",
+    "readiness"
+  ],
+  "_release": "release: the window opens only when the bare production marker (never a compound like Production-scale) and an action-under-way verb share a sentence that is not a question and carries no negation before the verb (dev operator, 2026-09-22, three cases: \"Production is release\", \"promotion to Production\" in an ask, \"Production-scale data ... without ... starting\"). Production words alone still wake by rule 1. A dot between digits does not end the sentence (2026-10-19: 'promoting release 1.0.0.707 to Production' opened no window).",
+  "release": [
+    "\\b(production|prod|octopus)\\b(?![-\\w])(?:[^.?]|(?<=\\d)\\.(?=\\d)){0,100}\\b(start\\w*|running|in progress|in flight|under way|dispatch\\w*|kicked off|triggered|applying|applied|deploying|promoting|executing|go ahead with|proceed(ing)? with)\\b",
+    "\\b(start\\w*|running|in progress|in flight|under way|dispatch\\w*|kicked off|triggered|applying|applied|deploying|promoting|executing|go ahead with|proceed(ing)? with)\\b(?:[^.?]|(?<=\\d)\\.(?=\\d)){0,100}\\b(production|prod|octopus)\\b(?![-\\w])",
+    "RunDatabaseMigrator\\s*=\\s*True"
+  ],
+  "claims": [
+    "^FM REPLY ",
+    "^FM WAITING ",
+    "^STEWARD WATCH \\| steward finished",
+    "^STEWARD WATCH \\| steward turn interrupted",
+    "^FM TASK .*\\b(done|finished|landed|merged|verified|passing|passed|complete|completed|shipped)\\b",
+    "\\b(landed and verified|verified on|merged to main|all (tests|checks) pass(ed|ing)?)\\b"
+  ],
+  "instrument": [
+    "^COLLECTOR \\| write your pickup note:",
+    "^FM WATCH \\|",
+    "^STEWARD WATCH \\| (cannot read|steward rollouts readable)",
+    "^STEWARD WATCH \\| no steward answer",
+    "^LIGHTHOUSE (ok|ALERT) \\| fleet probe",
+    "^LIGHTHOUSE ALERT \\| .*\\bBLIND\\b",
+    "^LIGHTHOUSE ALERT \\| GATE",
+    "^RECORD CHECK \\| board unreadable",
+    "^GATE \\|",
+    "^BOARD WATCH \\|"
+  ],
+  "drop": {
+    "own status-file wake": "^FM WAKE [^|]*\\| .*\\b(status[- ]file|state[- ]file|stale pane|housekeeping|no recent outcome)\\b",
+    "worker started": "^LIGHTHOUSE fleet \\| a worker started",
+    "task pause record": "^FM TASK [^|]*\\| [^|]* \\| .*\\bpaused\\b"
+  },
+  "quietDrop": {
+    "watcher replacement": "^(?:(?:fmwatch|boardwatch|stwatch)\\.cjs: replaced a leftover copy \\(pid \\d+\\)|gate\\.cjs: replaced (?:a leftover|an orphaned) gate \\(pid \\d+, source [\\w-]+\\)|LIGHTHOUSE \\| replaced the previous sweep \\(pid \\d+\\)(?: that was still running)?; single instance kept)$",
+    "routine task status": "^FM TASK [^|]*\\| [^|]*\\|\\s*(working|paused|resolved)\\b",
+    "answered question": "^(LIGHTHOUSE ok|FM TASK [^|]*|FM WAKE [^|]*)\\s*\\|.*\\bquestion is answered\\b",
+    "board repository PR": "^FM (TASK|WAKE) [^|]*\\|.*(?:github\\.com/example/sample/board/pull/\\d+|example/sample/board\\s+(?:PR\\s*#?\\d+|pull request\\s*#?\\d+))"
+  },
+  "digest": {
+    "record check": "^RECORD CHECK \\|",
+    "sweep ok": "^LIGHTHOUSE ok \\|"
+  },
+  "stateful": {
+    "record": "^RECORD CHECK \\| ([^|]+) \\|",
+    "task": "^FM TASK [^|]*\\| ([^|(]+)",
+    "sweep": "^(LIGHTHOUSE (?:ok|ALERT|DECISION|fleet) \\| [^;:(]{0,40})"
+  },
+  "thresholds": {
+    "attention": 0.5,
+    "confidence": 0.6,
+    "repeat": 0.5
+  },
+  "_releaseNot": "local policy",
+  "releaseNot": [
+    "\\b(no|not|without|skip\\w*|never|instead of)\\s+(the\\s+|a\\s+|any\\s+)?(migration|migrations|deploy\\w*|promotion|release|rollback)\\b",
+    "\\b(migration|deploy\\w*)\\s*[:=]\\s*(none|no|false|skipped)\\b",
+    "\\?",
+    "\\b(asking|asks|should (we|i)|may i|shall (we|i)|awaiting|waiting (for|on) (your|a|his) (go|word|approval|decision|yes)|for your (go|approval|decision)|whether to)\\b",
+    "\\b(without|rather than|instead of|not)\\b(?:[^.?]|(?<=\\d)\\.(?=\\d)){0,60}\\b(start\\w*|running|dispatch\\w*|deploy\\w*|promot\\w*|migrat\\w*|applying|executing)\\b",
+    "\\b(read[- ]?only|read\\w*|log|logs|scout\\w*|check\\w*|inspect\\w*|quer(y|ies)|select|look\\w*|view\\w*|monitor\\w*|health|dry[- ]?run|light|survey\\w*|audit\\w*|diagnos\\w*)\\b"
+  ],
+  "_routineReplies": "local policy",
+  "routineReplies": [
+    "^FM REPLY [^|]*\\|\\s*(shipshape|all clear|nothing (needed|to do|new|changed)|no action needed)[.!;, ]*(nothing (needed|to do)[.!]*)?\\s*(\\[exact text saved: [^\\]]*\\]\\s*)?(\\[key [^\\]]*\\])?\\s*$"
+  ]
+}

@@ -1,0 +1,12 @@
+---
+title: "A coordinator notice wakes the operator without becoming the owner"
+---
+stateDiagram-v2
+  s0: No notice
+  s1: Notice waits in inbox
+  s2: Operator woken once
+  s3: Answered on the inbox card
+  [*] --> s0
+  s0 --> s1: Coordinator posts a notice
+  s1 --> s2: Inbox read succeeds and passes the wake gate
+  s2 --> s3: Operator replies on the inbox card

@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["request", "silent", "oneLine", "text", "choice", "irreversible", "category", "cites", "claims", "svg", "missing", "overview"],
+  "properties": {
+    "request": { "type": "string" },
+    "silent": { "type": "boolean" },
+    "oneLine": { "type": "string" },
+    "text": { "type": "string" },
+    "choice": { "type": "string" },
+    "irreversible": { "type": "boolean" },
+    "category": { "type": "string", "enum": ["none", "duplicate", "conflict", "stale", "scope", "bloat", "secret", "other"] },
+    "cites": { "type": "array", "items": { "type": "integer" } },
+    "claims": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["text", "record"], "properties": { "text": { "type": "string" }, "record": { "type": "string" } } } },
+    "svg": { "type": "string" },
+    "missing": { "type": "array", "items": { "type": "string" } },
+    "overview": { "type": "object", "additionalProperties": false, "required": ["stands", "struggles", "advice", "since"], "properties": { "stands": { "type": "string" }, "struggles": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["text", "card"], "properties": { "text": { "type": "string" }, "card": { "type": "string" } } } }, "advice": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["text", "card"], "properties": { "text": { "type": "string" }, "card": { "type": "string" } } } }, "since": { "type": "string" } } }
+  }
+}

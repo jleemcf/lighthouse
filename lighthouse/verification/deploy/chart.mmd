@@ -1,0 +1,41 @@
+---
+title: "Board releases: validate, drain, switch, recover"
+---
+stateDiagram-v2
+  s0: Previous release serving
+  s1: Candidate prepared away from active code
+  s2: Deployment refused or previous release restored
+  s3: Code, assets, config and schema checked
+  s4: Previous code retained
+  s5: Store quiet#59; ready to drain
+  s6: Previous process exited
+  s7: No process running#59; restoring previous pointer
+  s8: Final store saved beside retained code
+  s9: Previous code selected#59; ready for manual manager
+  s10: Current release switched with no process running
+  s11: Candidate running#59; checking health
+  s12: Candidate accepted
+  s13: Failed candidate must exit before restoration
+  s14: Stop timed out#59; journal retained for manual recovery
+  [*] --> s0
+  s0 --> s1: prepare candidate
+  s1 --> s2: reject invalid code or unsupported store schema
+  s1 --> s3: accept candidate checks
+  s3 --> s4: retain previous code without overwriting it
+  s3 --> s2: fault or quiet/stop timeout#59; leave previous process alone
+  s4 --> s2: fault or quiet/stop timeout#59; leave previous process alone
+  s4 --> s5: wait until store is quiet
+  s5 --> s2: fault or quiet/stop timeout#59; leave previous process alone
+  s5 --> s6: stop and flush previous process
+  s6 --> s7: fault or failed startup#59; enter restoration
+  s6 --> s8: save final store safety copy
+  s7 --> s9: restore retained previous release
+  s8 --> s7: fault or failed startup#59; enter restoration
+  s8 --> s10: atomically rename current release link
+  s9 --> s2: start previous release#59; report deployment failure
+  s10 --> s11: start pinned candidate path
+  s10 --> s7: fault or failed startup#59; enter restoration
+  s11 --> s12: accept running process, HTTP 200, cards and clean log
+  s11 --> s13: reject health check
+  s13 --> s7: confirm candidate process exited
+  s13 --> s14: refuse switch while candidate still runs

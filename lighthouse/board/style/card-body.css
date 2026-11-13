@@ -1,0 +1,272 @@
+/* ---- card body (shared by the expanded card and the panel) ---- */
+.cbody {
+  display: grid;
+  gap: 8px;
+}
+.cbody h5 {
+  margin: 6px 0 0;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+.lane-tag {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lane-tag.waiting {
+  color: var(--signal);
+}
+.lane-tag .density button {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+.desc {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  max-width: 68ch;
+}
+.desc.context {
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+.desc.detail,
+.desc.muted {
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.desc.muted {
+  font-style: italic;
+  color: var(--muted);
+}
+details.hist summary {
+  cursor: pointer;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+details.hist .log {
+  margin-top: 6px;
+}
+.p-meta {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 3px 10px;
+  font-size: 12px;
+  color: var(--ink-2);
+  margin: 0;
+}
+.p-meta dt {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.p-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.log,
+.stream {
+  display: grid;
+  gap: 4px;
+}
+.entry {
+  display: grid;
+  grid-template-columns: 68px 58px 1fr;
+  gap: 6px;
+  font-size: 12px;
+  align-items: baseline;
+}
+time .rel {
+  color: var(--muted);
+}
+time .rel::before {
+  content: " \00b7 ";
+}
+.entry time {
+  display: grid;
+  line-height: 1.25;
+}
+.entry time .rel {
+  font-size: 10px;
+}
+.entry time .rel::before {
+  content: none;
+}
+.entry time {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.entry .kind {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  padding: 1px 4px;
+  border-radius: 3px;
+  text-align: center;
+}
+/* One colour per label, wherever a label shows: red asks, blue answers, teal status, plum context, green task open
+   and close, amber relayed, ember prompts, grey FYI, muted shift and ops. */
+.kind.ACTION,
+.lbl.ACTION {
+  background: var(--signal-soft);
+  color: var(--signal);
+}
+.kind.FYI,
+.lbl.FYI {
+  background: var(--line-2);
+  color: var(--ink-2);
+}
+.kind.REPLY,
+.lbl.REPLY {
+  background: var(--reply-soft);
+  color: var(--reply);
+}
+.kind.STATUS,
+.lbl.STATUS {
+  background: var(--teal-soft);
+  color: var(--teal);
+}
+.kind.CONTEXT,
+.lbl.CONTEXT {
+  background: var(--plum-soft);
+  color: var(--plum);
+}
+.kind.TASK_CREATED,
+.lbl.TASK_CREATED,
+.kind.TASK_FINISHED,
+.lbl.TASK_FINISHED {
+  background: var(--starboard-soft);
+  color: var(--starboard);
+}
+.kind.RELAYED,
+.lbl.RELAYED {
+  background: var(--lamp-soft);
+  color: var(--lamp);
+}
+.kind.PROMPT,
+.lbl.PROMPT {
+  background: var(--ember-soft);
+  color: var(--ember);
+}
+.lbl.YOLO,
+.chip.yolo {
+  background: var(--plum-soft);
+  border-color: transparent;
+  color: var(--plum);
+}
+/* A scope he typed can be a few words: it wraps on a phone, never runs off it. */
+.chip.yolo {
+  white-space: normal;
+}
+.kind.SHIFT,
+.lbl.SHIFT,
+.kind.OPS,
+.lbl.OPS {
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.kind.NOTICE,
+.lbl.NOTICE {
+  background: var(--plum-soft);
+  color: var(--plum);
+}
+/* The conduct strip: every fault the brief forbids, counted over the last hour, per board. */
+.conduct {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 2px 0 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.conduct .cpill {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  border: 1px solid var(--line-2);
+  white-space: nowrap;
+}
+.conduct .cpill.warn {
+  background: var(--lamp-soft);
+  color: var(--lamp);
+  border-color: transparent;
+}
+.conduct .cpill.bad {
+  background: var(--signal-soft);
+  color: var(--signal);
+  border-color: transparent;
+}
+.conduct .cpill.ok {
+  color: var(--starboard);
+}
+.kind.OWNER {
+  background: var(--lamp-soft);
+  color: var(--lamp);
+}
+.msg .who .lbl.ACTION,
+.msg .who .lbl.FYI,
+.msg .who .lbl.REPLY,
+.msg .who .lbl.STATUS,
+.msg .who .lbl.CONTEXT,
+.msg .who .lbl.TASK_CREATED,
+.msg .who .lbl.TASK_FINISHED,
+.msg .who .lbl.RELAYED,
+.msg .who .lbl.PROMPT,
+.msg .who .lbl.SHIFT,
+.msg .who .lbl.OPS {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.activity .kind,
+.activity-list .kind {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-right: 4px;
+}
+.entry .text {
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+/* A log line reads formatted, as a message does. */
+.entry .text p,
+.entry .text ul,
+.entry .text blockquote,
+.entry .text pre {
+  margin: 0 0 4px;
+}
+.entry .text ul {
+  padding-left: 18px;
+}
+.entry .who {
+  color: var(--muted);
+}
+.entry .ebody {
+  grid-column: 3;
+  font-size: 12px;
+  color: var(--ink-2);
+}

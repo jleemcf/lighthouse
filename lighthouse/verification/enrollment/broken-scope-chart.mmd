@@ -1,0 +1,34 @@
+---
+title: "One-use enrollment survives a lost reply"
+---
+stateDiagram-v2
+  state "Legend" as legend {
+    lg0: Breaks ScopeIsExact
+    lg1: Path to the ScopeIsExact bug
+  }
+  class lg0 breaks
+  class lg1 bugPath
+  s0: Grant available
+  s1: Unused grant expired
+  s2: Preparing private transaction
+  s3: Installed durably#59; reply pending
+  s4: Wrong scope installed
+  s5: Installed#59; reply may be lost
+  s6: Installation confirmed
+  [*] --> s0
+  s0 --> s1: the unused grant expires
+  s0 --> s2: an installation submits its scoped grant
+  s2 --> s0: the process stops and restarts
+  s2 --> s2: private board data is flushed or private credential data is flushed or the selection is flushed
+  s2 --> s1: the process stops and restarts
+  s2 --> s3: the complete transaction becomes current
+  s2 --> s4: the complete transaction becomes current
+  s3 --> s5: the reply is lost or the process stops and restarts
+  s3 --> s6: the host confirms the installation
+  s5 --> s6: the installation retries with its original proof
+  s6 --> s5: the process stops and restarts
+  classDef breaks fill:#ffecee,stroke:#e72e3b,stroke-width:2.5px,color:#cd2834
+  class s0 bugPath
+  class s2 bugPath
+  class s4 breaks
+  class s4 bugPath

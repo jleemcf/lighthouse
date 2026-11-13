@@ -1,0 +1,22 @@
+---
+title: "Retry checks its basis. Repeating does not decide again"
+---
+stateDiagram-v2
+  s0: Approved. Ticket checks its basis
+  s1: First ticket issued
+  s2: Approved. Basis ended
+  s3: Received. Repeat checks its basis
+  s4: Repeat ticket issued
+  s5: Received. Basis ended
+  [*] --> s0
+  s0 --> s1: issue a ticket with Send or a checked current basis
+  s0 --> s2: authority ends or his word expires or is overtaken
+  s1 --> s0: delivery fails without a receipt
+  s1 --> s3: record delivery without deciding another ask
+  s3 --> s4: issue a ticket with Send or a checked current basis
+  s1 --> s2: delivery fails without a receipt
+  s1 --> s5: record delivery without deciding another ask
+  s3 --> s5: authority ends or his word expires or is overtaken
+  s4 --> s3: delivery fails without a receipt or record delivery without deciding another ask
+  s2 --> s0: captain gives fresh words or a new authority covers the retry
+  s4 --> s5: delivery fails without a receipt or record delivery without deciding another ask

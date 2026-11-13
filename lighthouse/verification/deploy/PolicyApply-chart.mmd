@@ -1,0 +1,16 @@
+---
+title: "Applying equal policy content preserves the running citation bytes"
+---
+stateDiagram-v2
+  state "Different parsed policy" as s0 {
+    s1: Before apply
+    s2: repository bytes
+  }
+  state "Same parsed policy" as s3 {
+    s4: Before apply
+    s5: running bytes
+  }
+  [*] --> s1
+  [*] --> s4
+  s1 --> s2: apply the verified profile
+  s4 --> s5: apply the verified profile

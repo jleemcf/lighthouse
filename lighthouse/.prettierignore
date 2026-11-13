@@ -1,0 +1,4 @@
+server/public/
+board/vendor/
+handoffs/
+node_modules/

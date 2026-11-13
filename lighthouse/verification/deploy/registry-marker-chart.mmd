@@ -1,0 +1,30 @@
+---
+title: "Migrate offline, deploy compatible code, retain newer work"
+---
+stateDiagram-v2
+  state "Legend" as legend {
+    lg0: Breaks MarkerRequiresCompatibleRollback or MarkerRequiresFullBackup or MarkerRequiresRegistry
+    lg1: Path to the MarkerRequiresCompatibleRollback or MarkerRequiresFullBackup or MarkerRequiresRegistry bug
+  }
+  class lg0 breaks
+  class lg1 bugPath
+  s0: offline schema 1
+  s1: backup complete
+  s2: Schema marked without a backup
+  s3: rollback ready
+  s4: registry ready
+  s5: offline schema 2
+  s6: serving schema 2
+  s7: rolled back compatible code
+  [*] --> s0
+  s0 --> s1: a full private backup finishes
+  s0 --> s2: the host explicitly marks schema 2
+  s1 --> s3: a schema-2 fallback build is retained
+  s3 --> s4: the private registry is imported
+  s4 --> s5: the host explicitly marks schema 2
+  s5 --> s6: the host deploys a schema-2 release
+  s6 --> s7: only compatible code is selected#59; data stays current
+  classDef breaks fill:#ffecee,stroke:#e72e3b,stroke-width:2.5px,color:#cd2834
+  class s0 bugPath
+  class s2 breaks
+  class s2 bugPath

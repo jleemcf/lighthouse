@@ -1,0 +1,27 @@
+{
+  "schema": 2,
+  "include": [
+    ".claude/skills/",
+    ".gitattributes",
+    ".github/",
+    ".gitignore",
+    "CONTRIBUTING.md",
+    "LICENSE",
+    "README.md",
+    "SECURITY.md",
+    "docs/",
+    "lighthouse/",
+    "scripts/"
+  ],
+  "exclude": {
+    "private/": "Private overlay, profiles, policy history and local notes",
+    "docs/parity-ledger.md": "Local verification record",
+    "docs/staging-notes.md": "Local working notes",
+    "lighthouse/operator-kit/QUIET-PROOF.md": "Private verification ledger"
+  },
+  "privateVerificationDocs": {
+    "prefix": "lighthouse/verification/",
+    "keep": ["README.md", "WRITE-INGRESS.md"],
+    "reason": "Private verification ledger; executable checks and model sources remain public"
+  }
+}

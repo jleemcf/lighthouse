@@ -1,0 +1,69 @@
+---
+title: "A delivered command waits for the board to accept its receipt"
+---
+stateDiagram-v2
+  s0: Ready
+  s1: Intent saved#59; not sent
+  s2: Intent saved#59; not sent#59; prompt superseded
+  s3: Outcome unknown#59; reconcile without resending
+  s4: Sending#59; outcome not yet known
+  s5: Not delivered#59; receipt awaiting acceptance
+  s6: Outcome unknown#59; reconcile without resending#59; prompt superseded
+  s7: Captain reconciled#59; audit kept#59; nothing sent
+  s8: Sending#59; outcome not yet known#59; prompt superseded
+  s9: Firstmate received#59; result not yet saved
+  s10: Receipt refused#59; evidence kept
+  s11: Not delivered#59; receipt awaiting acceptance#59; prompt superseded
+  s12: Delivered#59; receipt awaiting acceptance
+  s13: Captain reconciled#59; audit kept#59; nothing sent#59; prompt superseded
+  s14: Board accepted#59; journal records completion
+  s15: Permanent refusal#59; evidence kept for captain
+  s16: Firstmate received#59; result not yet saved#59; prompt superseded
+  s17: Receipt refused#59; evidence kept#59; prompt superseded
+  s18: Delivered#59; receipt awaiting acceptance#59; prompt superseded
+  s19: Permanent refusal#59; evidence kept for captain#59; prompt superseded
+  [*] --> s0
+  s0 --> s1: captain authorizes words#59; intent is saved
+  s1 --> s2: prompt ask is replaced, withdrawn, settled or its card closes
+  s1 --> s3: restart finds an interrupted attempt
+  s1 --> s4: save sending marker before invoking the route
+  s2 --> s6: restart finds an interrupted attempt
+  s2 --> s8: save sending marker before invoking the route
+  s3 --> s7: captain confirms evidence#59; close locally without sending or posting
+  s4 --> s3: restart finds an interrupted attempt or route returns an uncertain outcome
+  s4 --> s5: save a definite pre-send refusal as non-delivery
+  s4 --> s8: prompt ask is replaced, withdrawn, settled or its card closes
+  s4 --> s9: firstmate receives the words once
+  s5 --> s10: board refuses receipt or gives no matching acknowledgement
+  s5 --> s11: prompt ask is replaced, withdrawn, settled or its card closes
+  s5 --> s14: board accepts matching receipt, including duplicate
+  s5 --> s15: board permanently refuses#59; stop automatic receipt retries
+  s6 --> s13: captain confirms evidence#59; close locally without sending or posting
+  s8 --> s6: restart finds an interrupted attempt or route returns an uncertain outcome
+  s8 --> s11: save a definite pre-send refusal as non-delivery
+  s8 --> s16: firstmate receives the words once
+  s9 --> s12: save delivered result before requesting a receipt
+  s9 --> s3: restart finds an interrupted attempt or route returns an uncertain outcome
+  s9 --> s16: prompt ask is replaced, withdrawn, settled or its card closes
+  s10 --> s5: receipt request times out or returns 5xx
+  s10 --> s14: board accepts matching receipt, including duplicate
+  s10 --> s15: board permanently refuses#59; stop automatic receipt retries
+  s10 --> s17: prompt ask is replaced, withdrawn, settled or its card closes
+  s10 --> s7: captain confirms evidence#59; close locally without sending or posting
+  s11 --> s17: board refuses receipt or gives no matching acknowledgement
+  s11 --> s19: board permanently refuses#59; stop automatic receipt retries
+  s12 --> s10: board refuses receipt or gives no matching acknowledgement
+  s12 --> s18: prompt ask is replaced, withdrawn, settled or its card closes
+  s12 --> s14: board accepts matching receipt, including duplicate
+  s12 --> s15: board permanently refuses#59; stop automatic receipt retries
+  s15 --> s7: captain confirms evidence#59; close locally without sending or posting
+  s16 --> s18: save delivered result before requesting a receipt
+  s16 --> s6: restart finds an interrupted attempt or route returns an uncertain outcome
+  s17 --> s11: receipt request times out or returns 5xx
+  s17 --> s19: board permanently refuses#59; stop automatic receipt retries
+  s17 --> s13: captain confirms evidence#59; close locally without sending or posting
+  s10 --> s12: receipt request times out or returns 5xx
+  s18 --> s17: board refuses receipt or gives no matching acknowledgement
+  s18 --> s19: board permanently refuses#59; stop automatic receipt retries
+  s19 --> s13: captain confirms evidence#59; close locally without sending or posting
+  s17 --> s18: receipt request times out or returns 5xx

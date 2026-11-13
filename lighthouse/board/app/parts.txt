@@ -1,0 +1,23 @@
+# The page's script, in order. make-page.py joins these parts into the body of one function, so they share its
+# scope. "@data-layer" stands for server-layer.js, the served page's data layer.
+state.js
+@data-layer
+@shift-presence
+helpers.js
+messages.js
+card-body.js
+steward.js
+overview.js
+cards.js
+sides.js
+board.js
+home.js
+panel-scroll.js
+render.js
+actions.js
+events.js
+notify.js
+management-view.js
+management.js
+handoff.js
+boot.js

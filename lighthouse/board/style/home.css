@@ -1,0 +1,578 @@
+/* ---- home: the scene fills the page; what needs Owner sits small at the bottom ---- */
+.view.active.home {
+  display: block;
+}
+.home {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin-inline: -16px;
+  background: #0b1420;
+  overflow: hidden;
+}
+/* The top-right tools: hide (art only) above the demo settings, clear of the asks at the bottom. */
+.home .tools {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: calc(100% - 28px);
+}
+.home .tools .hide {
+  background: rgba(15, 23, 32, 0.58);
+  border: 1px solid rgba(230, 237, 242, 0.18);
+  color: #c3ced7;
+  font-size: 10.5px;
+  font-family: var(--mono);
+  border-radius: 999px;
+  padding: 3px 9px;
+  cursor: pointer;
+}
+.home .tools .hide.show {
+  opacity: 0.45;
+}
+.home .tools .hide.show:hover,
+.home .tools .hide.show:focus-visible {
+  opacity: 1;
+}
+.home .demo {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #93a3b0;
+}
+.home .demo button {
+  background: rgba(15, 23, 32, 0.58);
+  border: 1px solid rgba(230, 237, 242, 0.18);
+  color: #c3ced7;
+  font-size: 10.5px;
+  font-family: var(--mono);
+  border-radius: 999px;
+  padding: 3px 9px;
+  cursor: pointer;
+}
+.home .demo button[aria-pressed="true"] {
+  background: rgba(76, 195, 138, 0.25);
+  color: #e6edf2;
+  border-color: rgba(76, 195, 138, 0.5);
+}
+.home .demo .sep {
+  margin-left: 8px;
+}
+.home .letter {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%) rotate(-1.5deg);
+  z-index: 3;
+  width: min(440px, 90vw);
+}
+.home .paper {
+  background: #f4ebd3;
+  color: #3a3128;
+  border: 1px solid #c9b98f;
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 4px #f4ebd3,
+    inset 0 0 0 5px #d9c9a0;
+  padding: 18px 22px 16px;
+  font-family: Georgia, "Times New Roman", serif;
+}
+.home .paper .lhead {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a7a55;
+  margin-bottom: 10px;
+}
+.home .paper .ltext {
+  font-size: 16px;
+  line-height: 1.5;
+  font-style: italic;
+}
+.home .paper .lsign {
+  margin-top: 10px;
+  font-size: 14px;
+  text-align: right;
+}
+.home .paper button {
+  margin-top: 14px;
+  background: #3a3128;
+  color: #f4ebd3;
+  border: none;
+  border-radius: 3px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.home canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 62%;
+  image-rendering: pixelated;
+}
+.home .overlay {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  width: min(760px, 94vw);
+  display: grid;
+  gap: 6px;
+  z-index: 2;
+}
+.hbox {
+  background: rgba(15, 23, 32, 0.72);
+  border: 1px solid rgba(230, 237, 242, 0.12);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #e6edf2;
+  font-size: 12px;
+}
+.hbox.status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: #c3ced7;
+}
+.hbox.status b {
+  color: #e6edf2;
+  font-weight: 500;
+}
+.hbox.status .on {
+  color: #4cc38a;
+}
+.hbox.status .stale {
+  color: #f2b63c;
+}
+.hbox.status .off {
+  color: #93a3b0;
+}
+/* The asks never swallow the scene on a small screen. */
+.home .overlay .hbox:last-of-type {
+  max-height: 28vh;
+  overflow-y: auto;
+}
+.hbox h3 {
+  margin: 0 0 4px;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ff6a5b;
+  font-weight: 600;
+}
+.hbox h3.calm {
+  color: #4cc38a;
+  margin-bottom: 0;
+}
+/* Home's live feed: a tall column for each operator, newest at the foot, the whole of every message, a box under
+   each. The row scrolls sideways before a column gets narrower than reads well. Global, one message to every
+   operator, sits beneath them. */
+.home .feedwrap {
+  position: absolute;
+  top: 46px;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.home .fcols {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(380px, 1fr);
+  gap: 8px;
+  min-height: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.fcol,
+.gbar {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 24px rgba(8, 14, 22, 0.3);
+  min-width: 0;
+}
+.fcol {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.fhead {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line-2);
+  font-size: 12px;
+}
+.fhead b {
+  font-size: 13px;
+  font-weight: 600;
+}
+.fhead .p {
+  font-family: var(--mono);
+  font-size: 10.5px;
+}
+.fhead .p.on {
+  color: var(--teal);
+}
+.fhead .p.stale,
+.fhead .p.lost {
+  color: var(--lamp);
+}
+.fhead .p.off {
+  color: var(--muted);
+}
+.fhead .note {
+  color: var(--muted);
+  font-size: 11px;
+}
+.fhead .go {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  border-radius: 999px;
+  font-size: 11px;
+  padding: 2px 9px;
+  cursor: pointer;
+}
+.fhead .go:hover,
+.fhead .go:focus-visible {
+  border-color: var(--ink-2);
+  color: var(--ink);
+}
+.fneed {
+  display: grid;
+  gap: 2px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line-2);
+  background: var(--signal-soft);
+  font-size: 12px;
+}
+.fneed button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.fneed button:hover .ft,
+.fneed button:focus-visible .ft {
+  text-decoration: underline;
+}
+.fneed .ft {
+  font-weight: 600;
+}
+.fneed .fa {
+  color: var(--ink-2);
+}
+.fneed time {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--muted);
+}
+/* an ask in "Needs you", with its Reply beside it */
+.fneedrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+/* Reply: the column's box then writes to that card, once */
+.freply {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 10.5px;
+  line-height: 1;
+  padding: 3px 8px;
+  margin-left: auto;
+  cursor: pointer;
+}
+.freply:hover,
+.freply:focus-visible {
+  border-color: var(--ink-2);
+  color: var(--ink);
+}
+.freply.on {
+  background: var(--signal-soft);
+  border-color: var(--signal);
+  color: var(--ink);
+}
+/* above the box: the card it writes to, and the way back to General */
+.fto {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 4px 6px 4px 10px;
+  border: 1px solid var(--signal);
+  border-radius: 6px;
+  background: var(--signal-soft);
+  font-size: 12px;
+  color: var(--ink);
+}
+.fto span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fto button {
+  margin-left: auto;
+  background: none;
+  border: 0;
+  color: var(--ink-2);
+  font: inherit;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.fto button:hover,
+.fto button:focus-visible {
+  color: var(--ink);
+}
+.fneed h4 {
+  margin: 0;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--signal);
+}
+.fcol .fbody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fcol .fbody .msg {
+  max-width: 100%;
+  padding: 6px 9px;
+}
+.fcol .fbody .msg.owner {
+  align-self: flex-end;
+  max-width: 94%;
+}
+.fcol .fbody .msg .body {
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.fcol .fbody .empty {
+  color: var(--muted);
+  font-size: 12px;
+  padding: 6px 0;
+}
+.fcol .ffoot,
+.gbar .ffoot {
+  padding: 6px 8px;
+  border-top: 1px solid var(--line-2);
+}
+.fcol .compose textarea,
+.gbar .compose textarea {
+  min-height: 36px;
+  font-size: 12.5px;
+}
+.lbl.global {
+  background: var(--plum-soft);
+  color: var(--plum);
+}
+/* The columns keep the height. */
+.gbar {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  max-height: 27vh;
+}
+.gbar .fhead .note {
+  flex: 1;
+}
+.gbar .glist {
+  overflow-y: auto;
+  padding: 6px 10px;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 0;
+}
+.gmsg {
+  display: grid;
+  gap: 4px;
+}
+.gmsg .gtop {
+  display: flex;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.gmsg .gtext {
+  background: var(--lamp-soft);
+  padding: 6px 9px;
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+.gmsg .gcopies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 18px;
+  padding-left: 10px;
+}
+.gcopy {
+  display: inline-flex;
+  gap: 6px;
+  font-size: 12px;
+  align-items: baseline;
+}
+/* An answer gets its own line, whole. */
+.gcopy.has {
+  flex-basis: 100%;
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 8px;
+}
+.gcopy .gb {
+  font-weight: 600;
+}
+.gcopy .st {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--lamp);
+}
+.gcopy .st.ok {
+  color: var(--teal);
+}
+.gcopy .st.dim {
+  color: var(--muted);
+}
+.gcopy .ga {
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.gcopy .ga p {
+  margin: 0;
+}
+.home .tools .hide[aria-pressed="true"] {
+  background: rgba(76, 195, 138, 0.25);
+  color: #e6edf2;
+  border-color: rgba(76, 195, 138, 0.5);
+}
+.home .tools .row {
+  display: flex;
+  gap: 6px;
+}
+/* The feed carries who is on shift and what needs him; the scene's demo switches would sit on its columns. */
+.home.feeding .overlay,
+.home.feeding .demo {
+  display: none;
+}
+/* Lite mode, for a less powerful machine: nothing on the page moves. */
+.lite *,
+.lite *::before,
+.lite *::after {
+  animation: none !important;
+  transition: none !important;
+}
+.hask {
+  display: grid;
+  grid-template-columns: 54px 1fr auto;
+  gap: 8px;
+  padding: 5px 0;
+  align-items: baseline;
+  cursor: pointer;
+}
+.hask + .hask {
+  border-top: 1px solid rgba(230, 237, 242, 0.08);
+}
+.hask:hover .ht {
+  text-decoration: underline;
+}
+.hask .hb {
+  font-family: var(--display);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 12px;
+  color: #c3ced7;
+}
+.hask .ht {
+  color: #e6edf2;
+  font-weight: 500;
+}
+.hask .ha {
+  color: #c3ced7;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.hask time {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: #93a3b0;
+  white-space: nowrap;
+}
+
+/* ---- the banner, the fallback note and text for screen readers only ---- */
+.banners {
+  position: fixed;
+  left: 16px;
+  bottom: 12px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(520px, calc(100vw - 32px));
+}
+.banner {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--lamp);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 8px 12px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.banner.err {
+  border-left-color: var(--signal);
+}
+.fallback-note {
+  font-size: 11.5px;
+  color: var(--muted);
+  padding: 4px 0;
+}
+.sr {
+  position: absolute;
+  left: -9999px;
+}

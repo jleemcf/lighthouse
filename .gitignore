@@ -1,0 +1,18 @@
+
+# board server: local secrets and state, never committed
+lighthouse/server/config.json
+lighthouse/server/store.json*
+lighthouse/server/board.pid
+lighthouse/server/board.log
+lighthouse/server/vapid.json
+
+# Python bytecode caches (the kit tests import the scripts)
+__pycache__/
+*.pyc
+
+# board state never enters the repository: the live archive of cleared or aged cards (config.archiveDir)
+lighthouse/board-archive/
+
+# Local Claude Code preferences and worktrees
+.claude/settings.local.json
+.claude/worktrees/

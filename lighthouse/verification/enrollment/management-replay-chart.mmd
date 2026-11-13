@@ -1,0 +1,26 @@
+---
+title: "Board administration refuses unauthorized changes and clears invitations"
+---
+stateDiagram-v2
+  state "Legend" as legend {
+    lg0: Breaks NoGrantReadback
+    lg1: Path to the NoGrantReadback bug
+  }
+  class lg0 breaks
+  class lg1 bugPath
+  s0: An administration request is ready
+  s1: No secret remains on the page
+  s2: An authorized invitation is visible once
+  s3: The authorized membership change is audited
+  s4: A later read exposed the invitation
+  [*] --> s0
+  s0 --> s1: submit membership [administrator, protected form and schema 2 required]
+  s0 --> s2: issue an invitation [owner or administrator, protected form required]
+  s0 --> s3: submit membership [administrator, protected form and schema 2 required]
+  s2 --> s1: copy once or leave the page
+  s2 --> s4: read management again
+  classDef breaks fill:#ffecee,stroke:#e72e3b,stroke-width:2.5px,color:#cd2834
+  class s0 bugPath
+  class s2 bugPath
+  class s4 breaks
+  class s4 bugPath

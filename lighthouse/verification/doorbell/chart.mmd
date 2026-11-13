@@ -1,0 +1,26 @@
+---
+title: "Inbox doorbell: keep the latest committed wake until acknowledgment"
+---
+stateDiagram-v2
+  s0: Inbox quiet
+  s1: Board stopped#59; unanswered revision saved
+  s2: Latest saved revision awaits delivery or retry
+  s3: Sending the latest saved revision
+  s4: Wake in flight#59; newer update saved
+  s5: Receiver acknowledged the latest revision
+  [*] --> s0
+  s0 --> s1: the board stops before acknowledgment
+  s0 --> s2: a card log or conversation update commits
+  s1 --> s0: startup reconciles the persisted latest revision
+  s2 --> s1: the board stops before acknowledgment
+  s2 --> s3: the initial, trailing or retry timer sends
+  s1 --> s2: startup reconciles the persisted latest revision
+  s3 --> s2: receiver refuses, disconnects or times out or receiver accepts but its response is lost
+  s3 --> s1: the board stops before acknowledgment
+  s3 --> s4: a card log or conversation update commits
+  s3 --> s5: HTTP 2xx acknowledges the revision sent
+  s4 --> s2: receiver refuses, disconnects or times out or receiver accepts but its response is lost or HTTP 2xx acknowledges the revision sent
+  s4 --> s1: the board stops before acknowledgment
+  s5 --> s1: the board stops before acknowledgment
+  s5 --> s2: a card log or conversation update commits
+  s1 --> s5: startup reconciles the persisted latest revision

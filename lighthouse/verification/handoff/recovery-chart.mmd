@@ -1,0 +1,14 @@
+stateDiagram-v2
+    direction LR
+    state "Original holder, epoch 1; live lease, no approval" as Original
+    state "Successor, epoch 2; pickup, unknown effects held" as Unauthorized
+    [*] --> Original
+    Original --> Unauthorized: atomic acquisition with approval guard removed
+    classDef breaks fill:#fee2e2,stroke:#dc2626,color:#111827
+    class Unauthorized breaks
+    note right of Unauthorized
+        Deliberate recovery-approval.cfg fault only.
+        Breaks ApprovedPerLoss and EmergencyRevocation.
+        Shortest report path: 0 to 1.
+        Real-code mutation must fail the approval test.
+    end note

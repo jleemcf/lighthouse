@@ -1,0 +1,118 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#0F1720" />
+<title>Lighthouse Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&display=swap"
+/>
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" />
+<style>
+  /*STYLE*/
+</style>
+
+<div id="root">
+  <header class="top" id="top">
+    <canvas class="lamp" id="lamp" width="40" height="50" aria-hidden="true"></canvas>
+    <div class="wordmark">Lighthouse</div>
+    <button id="manageBoards" type="button" hidden aria-controls="management">Manage boards</button>
+    <nav class="tabs" role="tablist" id="tabs"></nav>
+    <div class="state">
+      <span class="asof" id="asof">no signal yet</span
+      ><button
+        class="bell"
+        id="bellBtn"
+        type="button"
+        hidden
+        aria-expanded="false"
+        aria-controls="notify"
+        title="Notifications on this phone or computer, and the others"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15L6 16z" />
+          <path d="M10 20a2 2 0 0 0 4 0" />
+        </svg></button
+      ><button
+        class="clear-notifications"
+        id="clearNotifications"
+        type="button"
+        title="Mark new board activity as read. Open asks stay open."
+        disabled
+      >
+        Clear notifications
+      </button>
+    </div>
+    <button
+      class="help-btn"
+      id="helpBtn"
+      type="button"
+      aria-expanded="false"
+      aria-controls="help"
+      title="How this board works"
+    >
+      ?
+    </button>
+  </header>
+
+  <section id="management" class="management" hidden aria-label="Board setup and management"></section>
+  <section class="notify" id="notify" hidden aria-label="Notifications"></section>
+  <section class="help" id="help" hidden>
+    <p>
+      <strong>Home</strong> is the whole fleet at a glance: the lighthouse, the three operators at their posts (lit when
+      on shift), and a feed of everything that happened, newest first.
+    </p>
+    <p>
+      <strong>Lanes say whose move it is.</strong> Waiting on Owner is his review queue; In flight is the fleet's,
+      firstmate's or the steward's; Held is an external wait or a deliberate park. Red means a stated decision or action
+      of Owner's is open; the lighthouse strobes while any is.
+    </p>
+    <p>
+      <strong>Click a card</strong> and it opens in place: the task's context, its latest status with earlier ones
+      behind a dropdown, and its conversation. "Open in panel" shows the same with an "everything in order" view.
+    </p>
+    <p>
+      <strong>Clear notifications</strong> marks new activity across all boards as read. It does not settle open asks or
+      remove messages. <strong>The bell</strong> sends a push to this phone or computer when an operator opens an ask or
+      the watch leaves a notice, with a switch per board for each device.
+    </p>
+    <p>
+      <strong>To answer or steer</strong>, write in a card's conversation, or in the General box below the lanes for
+      anything not tied to a task. Images can be pasted or attached anywhere you write. <strong>Bundle</strong>: press a
+      card's plus, or the Bundle button, to send one message addressing several tasks; while the bundle box is open,
+      cards can also be dragged into it. <strong>New task</strong> sends the operator a ready-made request to open one.
+    </p>
+    <p>
+      The server stamps every message with the identity the page was opened with, so a message from Owner is his by the
+      server's record. The page patches itself as things change; nothing you are typing or looking at is reset by an
+      incoming message.
+    </p>
+  </section>
+
+  <main id="app"></main>
+</div>
+<div class="banners">
+  <div class="banner" id="banner" hidden></div>
+  <div class="banner err" id="doorbell-status" role="status" hidden></div>
+</div>
+<dialog id="handoffDialog" aria-label="Operator handoff"></dialog>
+
+<script>
+  // morphdom 2.7.4 (MIT, Patrick Steele-Idem) is inlined below by the page build; it patches the DOM in place so a
+  // Re-render preserves scroll, focus, typed text and open cards; without morphdom, use innerHTML.
+  /*MORPHDOM*/
+</script>
+<script>
+  /*LETTERS*/
+</script>
+<script>
+  /*SCENE*/
+</script>
+<script>
+  /*APP*/
+</script>

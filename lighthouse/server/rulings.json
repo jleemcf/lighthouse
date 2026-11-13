@@ -1,0 +1,27 @@
+{
+ "from": "DIRECTION.example.md",
+ "count": 3,
+ "rulings": [
+  {
+   "n": 1,
+   "title": "Ask before external actions",
+   "attribution": "Owner",
+   "text": "(Owner) Obtain approval before sending an external instruction.",
+   "source": "own"
+  },
+  {
+   "n": 2,
+   "title": "Keep delivery evidence",
+   "attribution": "Relayed through the operator",
+   "text": "(Relayed through the operator) Record receipts without inventing success.",
+   "source": "relayed"
+  },
+  {
+   "n": 3,
+   "title": "Keep optional integrations optional",
+   "attribution": "Owner",
+   "text": "(Owner) A core board works without paid or project-specific services.",
+   "source": "own"
+  }
+ ]
+}

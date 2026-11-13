@@ -1,0 +1,32 @@
+{
+  "Signal": [
+    "FM TASK 10:00 | comparison | working: reading the package",
+    "FM TASK 10:01 | comparison | paused: waiting for the clock",
+    "FM TASK 10:02 | comparison | resolved: the comparison finished",
+    "FM TASK 10:03 | comparison | working: production is deploying",
+    "FM INPUT 10:03 | Use the fixture package. [key input:echo]",
+    "FM INPUT 10:04 | Compare the next package. [key input:human]",
+    "FM REPLY 10:05 | The comparison is ready. [key reply:result]",
+    "FM WAITING 10:06 | firstmate is waiting [key waiting:ask]",
+    "FM WAKE 10:07 | firstmate woke for the comparison",
+    "FM WAKE 10:08 | firstmate's question is answered",
+    "RECORD CHECK | comparison | in flight | on board: yes",
+    "RECORD CHECK | board unreadable: connection lost",
+    "LIGHTHOUSE ok | fleet lock re-acquired",
+    "LIGHTHOUSE ALERT | GATE BLIND"
+  ],
+  "Sample": [
+    "FM TASK 10:00 | board | example/sample/board PR #48 merged",
+    "FM TASK 10:01 | importer | paused: lunch",
+    "FM TASK 10:02 | importer | resolved: comparison finished",
+    "LIGHTHOUSE ok | firstmate's question is answered",
+    "FM INPUT 10:02 | Use the fixture package. [key input:echo]",
+    "FM INPUT 10:03 | Read the next fixture. [key input:human]",
+    "FM WAITING 10:04 | firstmate is waiting [key waiting:ask]",
+    "FM WAKE 10:05 | firstmate woke for the comparison",
+    "RECORD CHECK | importer | queued | on board: no",
+    "RECORD CHECK | board unreadable: access denied",
+    "LIGHTHOUSE ok | fleet lock re-acquired",
+    "LIGHTHOUSE ALERT | GATE BLIND"
+  ]
+}

@@ -1,0 +1,37 @@
+---
+title: "A fresh installation requires trust and a checked private binding"
+---
+stateDiagram-v2
+  state "Legend" as legend {
+    lg0: Breaks CompletionRequiresDoctor
+    lg1: Path to the CompletionRequiresDoctor bug
+  }
+  class lg0 breaks
+  class lg1 bugPath
+  s0: start
+  s1: host ready
+  s2: refused
+  s3: request prepared
+  s4: bound
+  s5: installed
+  s6: Completed without doctor
+  s7: verified
+  s8: complete
+  [*] --> s0
+  s0 --> s1: initialize the empty home
+  s0 --> s2: refuse an existing home
+  s1 --> s3: prepare the private installation request
+  s3 --> s3: approve the host
+  s3 --> s4: consume the approved scoped grant
+  s4 --> s5: install tools with a credential reference
+  s5 --> s6: report completion
+  s5 --> s7: check the installed home
+  s7 --> s8: report completion
+  classDef breaks fill:#ffecee,stroke:#e72e3b,stroke-width:2.5px,color:#cd2834
+  class s0 bugPath
+  class s1 bugPath
+  class s3 bugPath
+  class s4 bugPath
+  class s5 bugPath
+  class s6 breaks
+  class s6 bugPath

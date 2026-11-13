@@ -1,0 +1,36 @@
+---
+title: "Migrate offline, deploy compatible code, retain newer work"
+---
+stateDiagram-v2
+  state "Legend" as legend {
+    lg0: Breaks RollbackNeverRestoresOldData
+    lg1: Path to the RollbackNeverRestoresOldData bug
+  }
+  class lg0 breaks
+  class lg1 bugPath
+  s0: offline schema 1
+  s1: backup complete
+  s2: rollback ready
+  s3: registry ready
+  s4: offline schema 2
+  s5: serving schema 2
+  s6: rolled back compatible code
+  s7: Newer work overwritten by the old backup
+  [*] --> s0
+  s0 --> s1: a full private backup finishes
+  s1 --> s2: a schema-2 fallback build is retained
+  s2 --> s3: the private registry is imported
+  s3 --> s4: the host explicitly marks schema 2
+  s4 --> s5: the host deploys a schema-2 release
+  s5 --> s6: only compatible code is selected#59; data stays current
+  s5 --> s5: newer board work is saved
+  s5 --> s7: the pre-migration backup overwrites newer work
+  classDef breaks fill:#ffecee,stroke:#e72e3b,stroke-width:2.5px,color:#cd2834
+  class s0 bugPath
+  class s1 bugPath
+  class s2 bugPath
+  class s3 bugPath
+  class s4 bugPath
+  class s5 bugPath
+  class s7 breaks
+  class s7 bugPath

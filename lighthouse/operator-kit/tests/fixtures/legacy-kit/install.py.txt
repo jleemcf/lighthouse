@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+"""Stamp one machine's config into the operator kit and write the runnable copies into that machine's operator home.
+
+Usage:  python install.py --config <config.json> --out <operator home>
+
+The kit's scripts carry __PLACEHOLDERS__ (see config.example.json for every key). This installer replaces each with
+the config value, refuses to write if any placeholder is left unfilled, and never touches the kit itself. Run it
+again after changing the config; it overwrites only the scripts it owns. Nothing here starts a process.
+"""
+import argparse, json, os, re, shutil, sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+SCRIPTS = os.path.join(HERE, "scripts")
+# these read firstmate's home, so they run inside WSL; the rest run on Windows
+WSL_SIDE = {"lh-probe.sh", "lh-pending.py", "record-check.py", "record-check.sh", "fm-send.sh"}
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--config", required=True)
+    ap.add_argument("--out", required=True, help="the operator home on Windows (created if missing)")
+    ap.add_argument("--set", action="append", default=[], metavar="KEY=VALUE",
+                    help="fill or override a config value at install time, e.g. --set __BOARD_SERVER__=http://... "
+                         "(the board's address on the tailnet is typed here and never committed)")
+    ap.add_argument("--keep-from", metavar="CONFIG.JSON",
+                    help="an earlier installed config: its values are kept for every key the machine config leaves as "
+                         "its own placeholder (the board address and the like), so an update needs nothing typed "
+                         "again while new keys arrive from the repository")
+    a = ap.parse_args()
+    cfg = json.load(open(a.config, encoding="utf-8"))
+    for key, value in {"__OWNER_NAME__": "the captain", "__TIME_ZONE__": "UTC",
+                       "__WINDOWS_TIME_ZONE__": "UTC", "__BOARD_REPO__": "none"}.items():
+        cfg.setdefault(key, value)
+    # the home's earlier config fills the keys this config leaves open, so an update that brings a new key
+    # is not refused for want of the values typed at the first install
+    if a.keep_from and os.path.exists(a.keep_from):
+        kept = json.load(open(a.keep_from, encoding="utf-8"))
+        for k, v in cfg.items():
+            if v == k and k in kept and kept[k] != k: cfg[k] = kept[k]
+    for kv in a.set:
+        if "=" not in kv: sys.exit("--set wants KEY=VALUE, got " + kv)
+        k, v = kv.split("=", 1); cfg[k] = v
+    # a config may leave a value as its own placeholder, to be given with --set
+    unfilled = sorted(k for k, v in cfg.items() if v == k)
+    if unfilled:
+        sys.exit("give these at install time with --set KEY=VALUE: " + ", ".join(unfilled))
+    needed = set()
+    names = sorted(n for n in os.listdir(SCRIPTS) if os.path.isfile(os.path.join(SCRIPTS, n)))
+    for n in names:
+        needed |= set(re.findall(r"__[A-Z_]+__", open(os.path.join(SCRIPTS, n), encoding="utf-8").read()))
+    missing = sorted(k for k in needed if k not in cfg)
+    if missing:
+        sys.exit("config is missing values for: " + ", ".join(missing))
+    os.makedirs(a.out, exist_ok=True)
+    os.makedirs(os.path.join(a.out, "wsl"), exist_ok=True)
+    written = []; pending = []
+    for n in names:   # a pending .new from an earlier update goes in first, if the file is free now
+        for sub in ("", "wsl"):
+            q = os.path.join(a.out, sub, n)
+            if os.path.exists(q + ".new"):
+                try: os.replace(q + ".new", q)
+                except PermissionError: pass
+    for n in names:
+        s = open(os.path.join(SCRIPTS, n), encoding="utf-8").read()
+        for k, v in cfg.items():
+            s = s.replace(k, str(v))
+        left = re.findall(r"__[A-Z_]+__", s)
+        if left:
+            sys.exit(f"{n}: unfilled placeholders {sorted(set(left))}")
+        sub = "wsl" if n in WSL_SIDE else ""
+        p = os.path.join(a.out, sub, n)
+        # a new file is swapped in, never the old one rewritten in place: shift.sh runs this while bash is still
+        # reading shift.sh, and a script overwritten under a running bash ends in "unexpected EOF"
+        open(p + ".tmp", "w", encoding="utf-8", newline="\n").write(s)
+        # on Windows an open file (a running Monitor, or shift.sh itself) cannot be replaced: it is left as .new
+        # for shift.sh to swap in
+        try: os.replace(p + ".tmp", p)
+        except PermissionError:
+            os.replace(p + ".tmp", p + ".new"); pending.append(os.path.join(sub, n) if sub else n)
+        written.append(p)
+    # the filled config, --set values included, so a re-run from this copy needs nothing typed again
+    with open(os.path.join(a.out, "config.json"), "w", encoding="utf-8", newline="\n") as f:
+        json.dump(cfg, f, indent=2); f.write("\n")
+    # the test rig's page goes only to the test rig; the watch brief only to a home that watches
+    docs = (["OPERATOR-BRIEF.md", "OPERATOR-BRIEF-TOOLS.md", "SETUP.md", "README.md"]
+            + (["WATCH-BRIEF.md"] if str(cfg.get("__WATCH_BOARDS__", "none")) not in ("none", "") else []))
+    for doc in docs:
+        src = os.path.join(HERE, doc)
+        if os.path.exists(src):
+            text = open(src, encoding="utf-8").read()
+            for key, value in cfg.items(): text = text.replace(key, str(value))
+            target = os.path.join(a.out, doc)
+            open(target, "w", encoding="utf-8", newline="\n").write(text); written.append(target)
+    # skills the kit carries (the steward's diagram-design): replaced whole on every install, so no one edits them
+    # in place
+    skills_src, skills_out = os.path.join(HERE, "skills"), os.path.join(a.out, "skills")
+    if os.path.isdir(skills_src):
+        for name in os.listdir(skills_src):
+            dst = os.path.join(skills_out, name)
+            if os.path.isdir(dst): shutil.rmtree(dst, ignore_errors=True)
+            shutil.copytree(os.path.join(skills_src, name), dst); written.append(dst)
+    repo_root = os.path.abspath(os.path.join(HERE, "..", ".."))
+    with open(os.path.join(a.out, "REPO.txt"), "w", encoding="utf-8") as f:
+        f.write("This operator home was installed from the Lighthouse repository at:\n" + repo_root + "\n"
+                "Read OPERATOR-BRIEF.md here first. "
+                "SETUP.md is the machine-side page for the captain and the chief developer.\n")
+    written.append(os.path.join(a.out, "REPO.txt"))
+    if pending:
+        print(f"{len(pending)} file(s) are open on this machine and could not be replaced: " + ", ".join(pending)
+              + "; each was written as <name>.new and is swapped in by the next `bash shift.sh start` or `update` "
+              "once the Monitor holding it is stopped")
+    print("installed:"); [print("  " + p) for p in written]
+    print("WSL-side scripts must also be copied to the WSL path named by __OPERATOR_WSL_DIR__ in the config, e.g.")
+    print("  wsl -d <distro> -- bash -lc 'mkdir -p " + cfg["__OPERATOR_WSL_DIR__"] + "' then copy wsl/* there.")
+
+if __name__ == "__main__":
+    main()

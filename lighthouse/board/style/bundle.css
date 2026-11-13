@@ -1,0 +1,169 @@
+/* ---- Bundle, the Ops box, a suggested prompt's choices and the transcript box ---- */
+.gchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--reply);
+  background: var(--reply-soft);
+  border-radius: 999px;
+  padding: 2px 9px;
+  cursor: grab;
+  user-select: none;
+}
+.bparts {
+  display: grid;
+  gap: 10px;
+}
+.bpart {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  gap: 4px 8px;
+  align-items: start;
+}
+.bchip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  padding-top: 6px;
+  min-width: 0;
+}
+.bchip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bchip button {
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0 4px;
+  flex: none;
+}
+.bpart textarea {
+  min-height: 44px;
+  height: auto;
+  resize: vertical;
+}
+.bpart .pfiles {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.bpart .pfiles .files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bpart .pfiles .attach {
+  font-size: 11px;
+  padding: 1px 8px;
+}
+.bpart.general .bchip {
+  color: var(--reply);
+}
+.bundle-btn[aria-pressed="true"] {
+  background: var(--lamp-soft);
+  color: var(--lamp);
+  border-color: transparent;
+}
+.ops-btn[aria-pressed="true"] {
+  background: var(--surface-2);
+  color: var(--ink);
+  border-color: var(--muted);
+}
+.side.ops {
+  top: auto;
+  bottom: 12px;
+  width: min(420px, calc(100vw - 24px));
+  height: min(44vh, 400px);
+}
+.side.ops .dhead h3 {
+  color: var(--muted);
+}
+.side.ops .dhead h3::before {
+  background: var(--muted);
+}
+.side.ops .hint {
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+/* A suggested prompt: two tiny choices under the operator's message, Send or No, something else. */
+.decide {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+}
+.decide .tiny {
+  font-size: 10.5px;
+  padding: 1px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.decide .tiny.primary {
+  background: var(--lamp);
+  color: #1b2733;
+  border-color: transparent;
+  font-weight: 600;
+}
+.decide .tiny:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.decide .decided {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.decide.edit {
+  flex-direction: column;
+  align-items: stretch;
+}
+.decide.edit textarea {
+  width: 100%;
+  min-height: 72px;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.4;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  resize: vertical;
+}
+.decide.edit .row {
+  display: flex;
+  gap: 6px;
+}
+.msg .body blockquote {
+  margin: 4px 0;
+  padding: 4px 10px;
+  border-left: 2px solid var(--line);
+  color: var(--ink);
+}
+/* The transcript box: the operator's own chat, naked, with a box to talk to it directly. */
+.side.transcript .dhead h3 {
+  color: var(--ink-2);
+}
+.side.transcript .dhead h3::before {
+  background: var(--ink-2);
+}
+.side.transcript .dthread .msg {
+  max-width: 96%;
+}

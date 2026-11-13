@@ -1,0 +1,16 @@
+# The page's styles, in order: a later rule wins over an earlier one of the same weight, so the order matters.
+# make-page.py joins them into the page's <style>.
+base.css
+header.css
+board-head.css
+cards.css
+card-body.css
+messages.css
+panel.css
+general.css
+bundle.css
+full-screen.css
+home.css
+phones.css
+management.css
+handoff.css

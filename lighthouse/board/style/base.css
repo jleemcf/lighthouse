@@ -1,0 +1,124 @@
+/* ---- the colours (light, dark, or the theme chosen), the fonts and the page's base ---- */
+:root {
+  --ground: #e9eef1;
+  --surface: #ffffff;
+  --surface-2: #f1f4f6;
+  --ink: #1b2733;
+  --ink-2: #3e4d5a;
+  --muted: #64737f;
+  --line: #cfd8de;
+  --line-2: #e1e7eb;
+  --lamp: #d9970f;
+  --lamp-soft: #fbf1d6;
+  --signal: #c8352b;
+  --signal-soft: #fbe4e1;
+  --starboard: #2e8b57;
+  --starboard-soft: #ddf2e6;
+  --reply: #2f6db5;
+  --reply-soft: #deeaf8;
+  --teal: #1f8f86;
+  --teal-soft: #dcf1ef;
+  --plum: #7a55b8;
+  --plum-soft: #ebe3f7;
+  --ember: #c9640f;
+  --ember-soft: #fbe7d6;
+  --shadow: 0 1px 1px rgba(27, 39, 51, 0.08), 0 2px 6px rgba(27, 39, 51, 0.06);
+  --radius: 6px;
+  --display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0f1720;
+    --surface: #17222c;
+    --surface-2: #1c2733;
+    --ink: #e6edf2;
+    --ink-2: #c3ced7;
+    --muted: #93a3b0;
+    --line: #2a3844;
+    --line-2: #243240;
+    --lamp: #f2b63c;
+    --lamp-soft: #3a2f14;
+    --signal: #ff6a5b;
+    --signal-soft: #3d1b18;
+    --starboard: #4cc38a;
+    --starboard-soft: #16301f;
+    --reply: #7fb3f0;
+    --reply-soft: #1a2c42;
+    --teal: #5fd0c4;
+    --teal-soft: #143331;
+    --plum: #b79cf0;
+    --plum-soft: #2a2140;
+    --ember: #f0924a;
+    --ember-soft: #3d2514;
+    --shadow: 0 1px 1px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.35);
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #0f1720;
+  --surface: #17222c;
+  --surface-2: #1c2733;
+  --ink: #e6edf2;
+  --ink-2: #c3ced7;
+  --muted: #93a3b0;
+  --line: #2a3844;
+  --line-2: #243240;
+  --lamp: #f2b63c;
+  --lamp-soft: #3a2f14;
+  --signal: #ff6a5b;
+  --signal-soft: #3d1b18;
+  --starboard: #4cc38a;
+  --starboard-soft: #16301f;
+  --reply: #7fb3f0;
+  --reply-soft: #1a2c42;
+  --teal: #5fd0c4;
+  --teal-soft: #143331;
+  --plum: #b79cf0;
+  --plum-soft: #2a2140;
+  --ember: #f0924a;
+  --ember-soft: #3d2514;
+  --shadow: 0 1px 1px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 13px;
+  line-height: 1.4;
+  padding-inline: 16px;
+  padding-block: 0;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+#root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+button {
+  font: inherit;
+  color: inherit;
+}
+:focus-visible {
+  outline: 2px solid var(--lamp);
+  outline-offset: 1px;
+}
+[hidden] {
+  display: none !important;
+}
+/* Less motion: the panel no longer slides in. The canvases pace themselves; the card's slide is the point, so it
+   stays. */
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
+}

@@ -1,0 +1,19 @@
+---
+title: "Continuous shift through checkpoint and pickup"
+---
+stateDiagram-v2
+  state "Legend" as legend {
+    lg0: Breaks NoUnjustifiedHolds
+    lg1: Path to the NoUnjustifiedHolds bug
+  }
+  class lg0 breaks
+  class lg1 bugPath
+  s0: Original holder working
+  s1: Compaction invented a dispatch hold
+  [*] --> s0
+  s0 --> s0: unknown work remains
+  s0 --> s1: compact or reconnect without changing holder
+  classDef breaks fill:#ffecee,stroke:#e72e3b,stroke-width:2.5px,color:#cd2834
+  class s0 bugPath
+  class s1 breaks
+  class s1 bugPath

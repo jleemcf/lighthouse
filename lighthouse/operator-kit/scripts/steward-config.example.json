@@ -1,0 +1,23 @@
+{
+  "stewardDir": "C:/lighthouse-steward",
+  "codex": {
+    "js": "C:/path/to/codex/bin/codex.js"
+  },
+  "codexHome": "C:/lighthouse-steward-codex",
+  "model": "gpt-6.1-sol",
+  "effort": "xhigh",
+  "sandbox": "read-only",
+  "jobTimeoutMin": 20,
+  "skillDir": "C:/lighthouse-operator/skills/diagram-design",
+  "pack": [],
+  "review": {
+    "windows": [],
+    "wsl": {
+      "distro": "Ubuntu-24.04",
+      "paths": []
+    },
+    "exclude": ["memory-archive-", "skills-archive-", "/plugins/cache/"],
+    "quietMinutes": 10,
+    "everyMinutes": 10
+  }
+}

@@ -1,0 +1,394 @@
+/* ---- General and Bundle: overlays on the right that never move the lanes ---- */
+.board-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 10px;
+  padding-bottom: 8px;
+}
+.board-body .lanes {
+  padding-bottom: 0;
+}
+.side {
+  position: fixed;
+  z-index: 40;
+  right: 12px;
+  top: 74px;
+  bottom: 12px;
+  width: min(540px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  box-shadow:
+    0 10px 34px rgba(15, 23, 32, 0.28),
+    var(--shadow);
+}
+.side.dropping {
+  outline: 2px dashed var(--reply);
+  outline-offset: 2px;
+}
+.side .dhead {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line-2);
+}
+.side .dhead h3 {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--reply);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.side .dhead h3::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--reply);
+}
+.side.bundle .dhead h3 {
+  color: var(--lamp);
+}
+.side.bundle .dhead h3::before {
+  background: var(--lamp);
+}
+.side .dhead .n {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.side .dhead .close {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+}
+.side .dthread {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+}
+.side .dthread .msg {
+  max-width: 88%;
+}
+.side .dfoot {
+  flex: none;
+  border-top: 1px solid var(--line-2);
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border-radius: 0 0 var(--radius) var(--radius);
+  max-height: 55%;
+  overflow-y: auto;
+}
+.side .compose textarea {
+  min-height: 44px;
+  max-height: 180px;
+  field-sizing: content;
+}
+/* General: the conversation takes the room, the steward's overview is one line at the top that opens it full screen,
+   and one composer at the foot says whom it goes to. The steward's other notes sit in the conversation at the time
+   they came. */
+.side .gstew {
+  flex: none;
+  margin: 0;
+  padding: 6px 10px;
+  gap: 6px;
+  border-bottom: 1px solid var(--line-2);
+}
+.side .gstew-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ov-line {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 5px 8px;
+  border: 1px solid var(--line-2);
+  border-left: 3px solid var(--plum);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+}
+.ov-line:hover {
+  border-color: var(--plum);
+  color: var(--ink);
+}
+.ov-line:focus-visible {
+  outline: 2px solid var(--plum);
+  outline-offset: 1px;
+}
+.ov-line .k {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--plum);
+}
+.ov-line .at {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.ov-line .hl {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov-line .sp {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--ember-soft);
+  color: var(--ember);
+}
+.ov-line.fresh {
+  border-color: var(--plum);
+  box-shadow: 0 0 0 1px var(--plum-soft);
+}
+/* The overview itself, where a task shows its context and status: what stands, what is stuck, what to do, what
+   moved. */
+.ov {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+.ov-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+.ov-head h4 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--plum);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.ov-head h4::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--plum);
+}
+.ov-head .meta {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.ov-head .tiny {
+  margin-left: auto;
+}
+.ov-lead {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+.ov-sec {
+  display: grid;
+  gap: 6px;
+}
+.ov-sec h5 {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+.ov-sec h5 .n {
+  font-family: var(--mono);
+  letter-spacing: 0;
+  font-weight: 500;
+}
+.ov-sec .desc {
+  margin: 0;
+}
+.ov-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.ov-list li {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.ov-sec.struggles .ov-list li {
+  border-left: 3px solid var(--ember);
+  background: var(--ember-soft);
+  color: var(--ink);
+}
+.ov-sec.struggles h5 {
+  color: var(--ember);
+}
+.ov-sec.ov-adv .ov-list {
+  counter-reset: adv;
+}
+.ov-sec.ov-adv .ov-list li {
+  counter-increment: adv;
+  grid-template-columns: 22px 1fr;
+  column-gap: 6px;
+}
+.ov-sec.ov-adv .ov-list li::before {
+  content: counter(adv);
+  grid-row: 1 / span 3;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--plum);
+  padding-top: 1px;
+}
+.ov-sec.ov-adv .ov-list li > * {
+  grid-column: 2;
+}
+.ov-list .on-card {
+  justify-self: start;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+}
+.ov-list .decide {
+  margin: 0;
+}
+.ov-empty {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--muted);
+}
+.ov-earlier {
+  border-top: 1px solid var(--line-2);
+  padding-top: 8px;
+}
+.ov-earlier > summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--muted);
+}
+.ov-earlier .ov-old {
+  display: grid;
+  gap: 4px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line-2);
+  font-size: 12.5px;
+}
+.ov-earlier .ov-old:last-child {
+  border-bottom: none;
+}
+.ov-earlier .ov-old > summary {
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  color: var(--ink-2);
+}
+.ov-earlier .ov-old > summary time {
+  flex: none;
+}
+.ov-earlier .ov-old .ov {
+  gap: 8px;
+  padding: 6px 0 2px 12px;
+}
+.compose .gmode {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+.compose .gmode button {
+  background: none;
+  color: var(--ink-2);
+  border: none;
+  border-radius: 999px;
+  padding: 3px 11px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.compose .gmode button[aria-pressed="true"] {
+  background: var(--reply-soft);
+  color: var(--reply);
+  font-weight: 600;
+}
+.compose.stewmode .gmode button[aria-pressed="true"] {
+  background: var(--plum-soft);
+  color: var(--plum);
+}
+.compose.stewmode textarea {
+  border-color: var(--plum);
+}
+.compose.stewmode .row button[type="submit"] {
+  background: var(--plum);
+  color: var(--surface);
+}
+.compose.stewmode textarea:focus {
+  border-color: var(--plum);
+  outline-color: var(--plum);
+}
+.side .dbody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px;
+}

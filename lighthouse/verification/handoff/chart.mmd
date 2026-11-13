@@ -1,0 +1,28 @@
+---
+title: "One durable holder and fenced sessions"
+---
+stateDiagram-v2
+  s0: A holds epoch one
+  s1: A lost acting rights#59; shift retained
+  s2: A request awaits commit
+  s3: Captain nominated B
+  s4: Nomination invalidated
+  s5: B holds epoch two#59; A may settle its ticket
+  s6: B lost acting rights#59; shift retained
+  [*] --> s0
+  s0 --> s1: server lease expires without ending the shift
+  s0 --> s2: operator submits a request
+  s0 --> s3: captain approves a successor
+  s2 --> s1: server lease expires without ending the shift
+  s2 --> s0: request reaches durable commit
+  s3 --> s4: nomination expires or is cancelled or replaced
+  s3 --> s1: server lease expires without ending the shift
+  s3 --> s2: operator submits a request
+  s3 --> s5: one acceptor commits ownership and audit
+  s4 --> s1: server lease expires without ending the shift
+  s4 --> s2: operator submits a request
+  s1 --> s5: one acceptor commits ownership and audit
+  s2 --> s3: request reaches durable commit
+  s2 --> s5: one acceptor commits ownership and audit
+  s5 --> s6: server lease expires without ending the shift
+  s2 --> s4: request reaches durable commit

@@ -1,0 +1,24 @@
+---
+title: "Manual maintenance preserves the safety copy and the command result"
+---
+stateDiagram-v2
+  s0: Board serving
+  s1: Failure reported
+  s2: Target selected
+  s3: Archive cards
+  s4: Copy configured store
+  s5: Failure kept#59; restart
+  s6: Archive finished#59; restart
+  s7: Maintenance succeeded
+  [*] --> s0
+  s0 --> s1: refuse the target without stopping the board
+  s0 --> s2: select explicit or validated default board before stopping
+  s2 --> s3: stop and flush the board
+  s2 --> s4: stop and flush the board
+  s3 --> s5: archive succeeds or fails
+  s3 --> s6: archive succeeds or fails
+  s4 --> s5: copy succeeds or fails
+  s4 --> s3: copy succeeds or fails
+  s5 --> s1: restart without replacing the maintenance result
+  s6 --> s1: restart without replacing the maintenance result
+  s6 --> s7: restart without replacing the maintenance result

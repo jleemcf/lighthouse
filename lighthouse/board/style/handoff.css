@@ -1,0 +1,63 @@
+.handoff-status {
+  margin: 8px 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.handoff-status h3,
+.handoff-status p {
+  margin: 4px 0;
+}
+.handoff-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+#handoffDialog {
+  width: min(680px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  box-sizing: border-box;
+  overflow: auto;
+  border-radius: 12px;
+}
+#handoffDialog label {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+  min-width: 0;
+}
+#handoffDialog input,
+#handoffDialog textarea,
+#handoffDialog select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+#handoffDialog input[type="checkbox"] {
+  width: auto;
+  justify-self: start;
+}
+#handoffDialog textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+#handoffDialog button {
+  min-height: 44px;
+}
+#handoffRead {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+@media (max-width: 720px) {
+  .handoff-status {
+    margin: 8px;
+  }
+  .handoff-actions button {
+    flex: 1;
+    min-height: 44px;
+  }
+}

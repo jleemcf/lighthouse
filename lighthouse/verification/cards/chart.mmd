@@ -1,0 +1,106 @@
+---
+title: "Cards close safely and only task completion triggers afterDone"
+---
+stateDiagram-v2
+  s0: Not posted
+  s1: Captain posted work
+  s2: Staff answer asked#59; card inflight
+  s3: Staff answer asked#59; card waiting
+  s4: Staff answer asked#59; card held
+  s5: Task in progress
+  s6: Staff answer sending#59; card inflight
+  s7: Staff answer working#59; card inflight
+  s8: Waiting for captain
+  s9: Staff answer sending#59; card waiting
+  s10: Staff answer working#59; card waiting
+  s11: Waiting on someone else
+  s12: Staff answer sending#59; card held
+  s13: Staff answer working#59; card held
+  s14: Task closed
+  s15: Step complete, task unfinished
+  s16: Staff answer done#59; card inflight
+  s17: Staff answer failed#59; card inflight
+  s18: Captain answered, awaiting receipt
+  s19: Staff answer done#59; card waiting
+  s20: Staff answer failed#59; card waiting
+  s21: Waiting with an uncertain step-only hint
+  s22: Staff answer done#59; card done
+  s23: Staff answer done#59; card held
+  s24: Staff answer failed#59; card held
+  s25: Completed task reopened
+  s26: Ask settled
+  s27: New ask after task completion
+  [*] --> s0
+  s0 --> s1: captain posts work
+  s0 --> s2: staff asks a question
+  s1 --> s5: operator opens a card
+  s2 --> s3: operator asks for remaining work
+  s2 --> s4: operator holds the card
+  s2 --> s6: operator replies or retries
+  s2 --> s7: operator investigates
+  s3 --> s9: operator replies or retries
+  s3 --> s10: operator investigates
+  s3 --> s2: captain settles the ask or operator withdraws the ask or operator records the answer
+  s4 --> s3: operator asks for remaining work
+  s4 --> s12: operator replies or retries
+  s4 --> s13: operator investigates
+  s5 --> s8: operator asks for remaining work
+  s5 --> s11: operator holds the card
+  s5 --> s14: Close or TASK_FINISHED settles asks and closes
+  s5 --> s15: operator reports preflight complete
+  s6 --> s9: operator asks for remaining work
+  s6 --> s12: operator holds the card
+  s6 --> s16: CRM accepts the answer
+  s6 --> s17: CRM refuses the answer
+  s7 --> s6: operator replies or retries
+  s7 --> s10: operator asks for remaining work
+  s7 --> s13: operator holds the card
+  s8 --> s14: TASK_FINISHED settles asks and closes
+  s8 --> s18: captain answers
+  s8 --> s26: captain settles the ask or operator withdraws the ask
+  s9 --> s19: CRM accepts the answer
+  s9 --> s20: CRM refuses the answer
+  s9 --> s6: captain settles the ask or operator withdraws the ask or operator records the answer
+  s10 --> s9: operator replies or retries
+  s10 --> s7: captain settles the ask or operator withdraws the ask or operator records the answer
+  s11 --> s8: operator asks for remaining work
+  s11 --> s14: Close or TASK_FINISHED settles asks and closes
+  s12 --> s9: operator asks for remaining work
+  s12 --> s23: CRM accepts the answer
+  s12 --> s24: CRM refuses the answer
+  s13 --> s10: operator asks for remaining work
+  s13 --> s12: operator replies or retries
+  s14 --> s25: legacy writer reopens the card
+  s15 --> s21: operator asks for remaining work
+  s15 --> s11: operator holds the card
+  s15 --> s14: Close or TASK_FINISHED settles asks and closes
+  s16 --> s6: operator replies or retries
+  s16 --> s19: operator asks for remaining work
+  s16 --> s22: close after delivery with no open ask or Close or TASK_FINISHED settles asks and closes
+  s16 --> s23: operator holds the card
+  s17 --> s6: operator replies or retries
+  s17 --> s20: operator asks for remaining work
+  s17 --> s24: operator holds the card
+  s18 --> s14: TASK_FINISHED settles asks and closes
+  s18 --> s26: operator records the answer or operator withdraws the ask
+  s19 --> s9: operator replies or retries
+  s19 --> s22: TASK_FINISHED settles asks and closes
+  s19 --> s16: captain settles the ask or operator withdraws the ask or operator records the answer
+  s20 --> s9: operator replies or retries
+  s20 --> s17: captain settles the ask or operator withdraws the ask or operator records the answer
+  s21 --> s18: captain answers
+  s21 --> s14: TASK_FINISHED settles asks and closes
+  s21 --> s26: captain settles the ask or operator withdraws the ask
+  s22 --> s16: legacy writer reopens the card
+  s22 --> s6: operator replies or retries
+  s23 --> s12: operator replies or retries
+  s23 --> s19: operator asks for remaining work
+  s23 --> s22: close after delivery with no open ask or Close or TASK_FINISHED settles asks and closes
+  s24 --> s12: operator replies or retries
+  s24 --> s20: operator asks for remaining work
+  s11 --> s21: operator asks for remaining work
+  s25 --> s14: Close or TASK_FINISHED settles asks and closes
+  s25 --> s27: operator asks for remaining work
+  s26 --> s14: Close or TASK_FINISHED settles asks and closes
+  s27 --> s14: TASK_FINISHED settles asks and closes or Close
+  s14 --> s27: legacy writer reopens the card

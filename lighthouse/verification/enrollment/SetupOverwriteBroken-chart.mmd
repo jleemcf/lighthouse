@@ -1,0 +1,32 @@
+---
+title: "A fresh installation requires trust and a checked private binding"
+---
+stateDiagram-v2
+  state "Legend" as legend {
+    lg0: Breaks ExistingHomeUntouched
+    lg1: Path to the ExistingHomeUntouched bug
+  }
+  class lg0 breaks
+  class lg1 bugPath
+  s0: start
+  s1: host ready
+  s2: Existing home overwritten
+  s3: refused
+  s4: request prepared
+  s5: bound
+  s6: installed
+  s7: verified
+  s8: complete
+  [*] --> s0
+  s0 --> s1: initialize the empty home
+  s0 --> s2: initialize the empty home
+  s0 --> s3: refuse an existing home
+  s1 --> s4: prepare the private installation request
+  s4 --> s5: consume the approved scoped grant
+  s5 --> s6: install tools with a credential reference
+  s6 --> s7: check the installed home
+  s7 --> s8: report completion
+  classDef breaks fill:#ffecee,stroke:#e72e3b,stroke-width:2.5px,color:#cd2834
+  class s0 bugPath
+  class s2 breaks
+  class s2 bugPath

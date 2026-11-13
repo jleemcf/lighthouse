@@ -1,0 +1,13 @@
+---
+title: "Board administration refuses unauthorized changes and clears invitations"
+---
+stateDiagram-v2
+  s0: An administration request is ready
+  s1: No secret remains on the page
+  s2: An authorized invitation is visible once
+  s3: The authorized membership change is audited
+  [*] --> s0
+  s0 --> s1: submit membership [administrator, protected form and schema 2 required]
+  s0 --> s2: issue an invitation [owner or administrator, protected form required]
+  s0 --> s3: submit membership [administrator, protected form and schema 2 required]
+  s2 --> s1: copy once or leave the page or read management again

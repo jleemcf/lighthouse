@@ -1,0 +1,535 @@
+/* ---- full screen: the card panel and General, Transcript and Bundle fill the window. One switch serves them all,
+   remembered in this browser ---- */
+.wide-btn {
+  flex: none;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.wide-btn:hover {
+  color: var(--ink);
+}
+.side .dhead .wide-btn {
+  margin-left: auto;
+  height: 24px;
+  font-size: 11px;
+}
+.side .dhead .wide-btn + .close {
+  margin-left: 0;
+}
+/* The card full screen is two columns, each scrolling on its own at a width that reads: the task (what needs him,
+   the context, the status) on the left, the conversation on the right. */
+.panel.wide {
+  left: 0;
+  width: 100vw;
+  border-left: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+}
+.panel.wide .pw-head,
+.gfull .pw-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--line);
+}
+.panel.wide .pw-head h3,
+.gfull .pw-head h3 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.panel.wide .pw-head .jump,
+.gfull .pw-head .jump {
+  margin-left: 0;
+}
+.panel.wide .pw-body,
+.gfull .pw-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(300px, 540px) minmax(0, 860px);
+  justify-content: center;
+}
+.panel.wide .pw-task,
+.gfull .pw-task {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 24px 28px;
+  border-right: 1px solid var(--line-2);
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+.panel.wide .pw-task > h5:first-of-type,
+.gfull .pw-task > h5:first-of-type {
+  margin-top: 2px;
+}
+.panel.wide .pw-talk,
+.gfull .pw-talk {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.panel.wide .pw-talk .compose {
+  margin-top: auto;
+  bottom: 0;
+  margin-bottom: 0;
+  padding-bottom: 16px;
+}
+/* The task list down the left of full screen, every lane but Done, to switch cards in one click; it folds to a
+   strip. */
+.panel.wide .pw-main,
+.gfull .pw-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.panel.wide .pw-main > .pw-body,
+.gfull .pw-main > .pw-body {
+  flex: 1;
+  min-width: 0;
+}
+.pw-rail {
+  flex: none;
+  width: 252px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--surface-2);
+  border-right: 1px solid var(--line);
+  padding: 10px 8px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.pw-rail.shut {
+  width: 44px;
+  padding: 10px 7px;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+.rail-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rail-btn {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+}
+.rail-btn:hover {
+  color: var(--ink);
+}
+.pw-rail.shut .rail-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--signal);
+}
+.rail-pick {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.rail-pick-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+}
+.rail-pick-btn:hover,
+.rail-pick-btn[aria-expanded="true"] {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
+}
+.rail-pick-btn:focus-visible,
+.rail-menu button:focus-visible {
+  outline: 2px solid var(--reply);
+  outline-offset: -2px;
+}
+.rail-pick-btn .nm,
+.rail-menu .nm {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rail-pick-btn .dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--signal);
+}
+.rail-pick-btn .caret {
+  flex: none;
+  font-size: 11px;
+  letter-spacing: 0;
+}
+.rail-menu {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  display: grid;
+  gap: 1px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+.rail-menu button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+}
+.rail-menu button:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.rail-menu button[aria-checked="true"] {
+  color: var(--ink);
+  font-weight: 600;
+}
+.rail-menu .tick {
+  flex: none;
+  width: 12px;
+  color: var(--reply);
+}
+.rail-menu .count {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--signal-soft);
+  color: var(--signal);
+}
+.rail-none {
+  margin: 0;
+  padding: 0 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.rail-group {
+  display: grid;
+  gap: 1px;
+}
+.rail-group h5 {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 3px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.rail-group h5 .n {
+  font-family: var(--mono);
+  font-weight: 400;
+}
+.rail-group.waiting h5 {
+  color: var(--signal);
+}
+.rail-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.32;
+  text-align: left;
+  cursor: pointer;
+}
+.rail-item:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+.rail-item:focus-visible {
+  outline: 2px solid var(--reply);
+  outline-offset: -2px;
+}
+.rail-item.on {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+.rail-item .t {
+  flex: 1;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.rail-item .ask-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--signal);
+}
+.rail-item .badge {
+  flex: none;
+  margin-top: 1px;
+}
+.side.wide {
+  left: 12px;
+  width: auto;
+}
+/* One column that reads, centred. */
+.side.wide .dthread,
+.side.wide .dbody,
+.side.wide .dfoot,
+.side.wide .gstew {
+  padding-inline: max(14px, calc((100% - 940px) / 2));
+}
+/* General full screen has a task's frame: the task list, the steward's overview where a task has its context and
+   status, the conversation on the right. */
+.side.gfull {
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 100vw;
+  max-width: 100vw;
+  z-index: 50;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+.gfull .pw-head h3 .on {
+  color: var(--muted);
+  font-weight: 400;
+}
+.gfull .pw-head .n {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.gfull .pw-head .close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  cursor: pointer;
+  color: var(--muted);
+}
+/* Its conversation scrolls; the box to write in stays. */
+.gfull .pw-talk {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+.gfull .dthread {
+  padding: 14px 24px;
+}
+.gfull .dthread .msg {
+  max-width: 92%;
+}
+.gfull .dfoot {
+  padding: 8px 24px 14px;
+  border-radius: 0;
+  max-height: 45%;
+  overflow-x: hidden;
+}
+.gfull .compose .gmode {
+  flex-wrap: wrap;
+  width: auto;
+}
+.rail-item.rail-gen {
+  font-weight: 600;
+  color: var(--reply);
+}
+.rail-item.rail-gen .gdot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--reply);
+}
+.rail-item.rail-gen.on {
+  color: var(--ink);
+}
+/* The box to write in stays at the bottom while he scrolls up through the conversation. */
+.panel .compose,
+.card .cbody .compose {
+  position: sticky;
+  bottom: -20px;
+  z-index: 2;
+  background: var(--surface);
+  padding: 8px 0 20px;
+  margin-bottom: -20px;
+  border-top: 1px solid var(--line-2);
+  box-shadow: 0 -10px 12px -12px rgba(15, 23, 32, 0.35);
+}
+.card .cbody .compose {
+  bottom: 0;
+  padding-bottom: 4px;
+  margin-bottom: 0;
+}
+.panel .compose textarea,
+.card .cbody .compose textarea {
+  field-sizing: content;
+  max-height: 30vh;
+}
+@media (max-width: 900px) {
+  /* A narrow window: the two columns stack and scroll together. */
+  .panel.wide .pw-body,
+  .gfull .pw-body {
+    grid-template-columns: minmax(0, 1fr);
+    overflow-y: auto;
+  }
+  .panel.wide .pw-task,
+  .gfull .pw-task {
+    overflow: visible;
+    border-right: none;
+    border-bottom: 1px solid var(--line-2);
+  }
+  /* Stacked, each row is as tall as what it holds, never drawn over the next. */
+  .panel.wide .pw-task,
+  .panel.wide .pw-talk,
+  .gfull .pw-task,
+  .gfull .pw-talk {
+    min-height: auto;
+  }
+  .panel.wide .pw-talk {
+    overflow: visible;
+  }
+  .pw-rail {
+    display: none;
+  }
+  .gfull .pw-talk {
+    overflow: visible;
+  }
+  .gfull .dthread {
+    flex: none;
+    overflow: visible;
+  }
+  .gfull .dfoot {
+    position: sticky;
+    bottom: 0;
+    max-height: none;
+  }
+}
+/* ---- a dim label, a task named in a line, the Ops box's rows, the Bundle button's count ---- */
+.msg .who .lbl.dim {
+  color: var(--muted);
+  font-weight: 400;
+}
+/* A task named in a line, linked to its card. */
+.tlink {
+  color: var(--reply);
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.opsrow {
+  display: grid;
+  grid-template-columns: 62px 1fr;
+  gap: 8px;
+  padding: 5px 0;
+  border-top: 1px solid var(--line-2);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.opsrow time {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--muted);
+  padding-top: 1px;
+}
+.opsrow p {
+  margin: 0;
+}
+.opsrow.bnote {
+  color: var(--ink-2);
+}
+.opsrow .bline {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--muted);
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+.bundle-btn .badge {
+  background: var(--lamp);
+  color: #1b2733;
+}

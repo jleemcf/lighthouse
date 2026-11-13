@@ -1,0 +1,769 @@
+#!/usr/bin/env node
+'use strict';
+// The Lighthouse tool-call server for one operator home (docs/tool-calls.md). It speaks MCP over stdio to the
+// operator's Claude Code session and HTTP to the board, and holds three things the model never sees: the token, the
+// queue of calls that could not reach the board yet, and the path to relay.sh. No dependencies.
+//
+//   node lighthouse-mcp.cjs                 MCP server on stdio. Registered at LOCAL scope, from the folder the
+//                                           operator's session runs in, so firstmate and every other session of this
+//                                           user never get the tools:
+//                                           claude mcp add --scope local lighthouse -- node <this file>
+//   node lighthouse-mcp.cjs call <tool> '<json args>'   one call from a shell, for scripts and harnesses without MCP
+//   node lighthouse-mcp.cjs check [--project <dir>]     is the server registered there (local scope only), and are
+//                                                       the hooks in?
+//   node lighthouse-mcp.cjs install-hooks [--project <dir>]   writes the two hooks into
+//                                                             <dir>/.claude/settings.local.json
+//   node lighthouse-mcp.cjs here            is the session running this writing in the configured folder?
+//                                           (shift.sh start)
+//   node lighthouse-mcp.cjs hook precompact|sessionstart       what those hooks run (docs/tool-calls.md §9)
+//
+// Config is read from config.json beside this file (the home's operator config: the board's address, the board, the
+// token file), and the tool list from toolcalls-spec.json beside it. Nothing here prints the token, in any output or
+// error. Token: LH-SHADOW-TOKEN.txt when present (a shadow trial: the board stays in line mode, the collector keeps
+// LH-TOKEN.txt, and these tools only dry-run), otherwise LH-TOKEN.txt.
+const fs = require('fs'),
+  os = require('os'),
+  path = require('path'),
+  http = require('http'),
+  https = require('https'),
+  crypto = require('crypto'),
+  { spawnSync } = require('child_process');
+
+const HERE = __dirname;
+const readJson = (f, d) => {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(HERE, f), 'utf8'));
+  } catch (e) {
+    return d;
+  }
+};
+const CFG = readJson('config.json', {});
+const SPEC = readJson('toolcalls-spec.json', { tools: [] });
+// the installer stamps the home's values here, as in every kit script (a value read from CFG by its placeholder name
+// would break the installer)
+const SERVER = process.env.LH_SERVER || CFG.server || '__BOARD_SERVER__';
+const BOARD = process.env.LH_BOARD || CFG.board || '__BOARD_ID__';
+// its folder name is the session folder's path, as Claude Code encodes it
+const TRANSCRIPTS = process.env.LH_TRANSCRIPTS || CFG.transcripts || '__OPERATOR_TRANSCRIPT_DIR__';
+// The one setting may name the operator's session folder itself, so a new operator can start in a clean folder that
+// has no transcript folder yet; the transcript folder is then that path as Claude Code encodes it, under its projects
+// folder
+const PROJECTS = path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'), 'projects');
+const SESSION_DIR =
+  /^__/.test(String(TRANSCRIPTS)) ||
+  /[\\/]\.claude[\\/]projects[\\/][^\\/]+[\\/]?$/.test(String(TRANSCRIPTS)) ||
+  path.dirname(path.resolve(String(TRANSCRIPTS))).toLowerCase() === PROJECTS.toLowerCase()
+    ? null
+    : path.resolve(String(TRANSCRIPTS));
+const TRANSCRIPT_DIR = SESSION_DIR
+  ? path.join(PROJECTS, SESSION_DIR.replace(/[^a-zA-Z0-9]/g, '-'))
+  : String(TRANSCRIPTS);
+const SHADOW_FILE = path.join(HERE, 'LH-SHADOW-TOKEN.txt');
+const QUEUE = path.join(HERE, 'calls-outbox.jsonl');
+// queued calls a board route refused outright (not the tool: the route), kept and told
+const DEAD = path.join(HERE, 'calls-undelivered.jsonl');
+const RESULTS = path.join(HERE, 'relay-results.jsonl'); // deliveries the board has not heard about yet
+const MAX_ARGS = 200 * 1024; // a call larger than this would never reach the board: refused here, never queued
+function token() {
+  if (process.env.LH_TOKEN) return process.env.LH_TOKEN.trim();
+  for (const f of ['LH-SHADOW-TOKEN.txt', 'LH-TOKEN.txt', 'lh-token.txt']) {
+    try {
+      const t = fs.readFileSync(path.join(HERE, f), 'utf8').trim();
+      if (t) return t;
+    } catch (e) {}
+  }
+  return '';
+}
+const scrub = s => {
+  const t = token();
+  return t ? String(s).split(t).join('<token>') : String(s);
+}; // never echo the token
+
+// ---------- the board ----------
+function request(method, p, body, headers = {}) {
+  return new Promise(resolve => {
+    let u;
+    try {
+      u = new URL(p, SERVER);
+    } catch (e) {
+      return resolve({ status: 0, error: 'no board address configured' });
+    }
+    const mod = u.protocol === 'https:' ? https : http,
+      data = Buffer.isBuffer(body) ? body : body ? Buffer.from(JSON.stringify(body)) : null;
+    const req = mod.request(
+      u,
+      {
+        method,
+        agent: false,
+        headers: Object.assign(
+          { Authorization: 'Bearer ' + token(), Accept: 'application/json' },
+          data ? { 'Content-Type': 'application/json', 'Content-Length': data.length } : {},
+          headers,
+        ),
+      },
+      res => {
+        let d = '';
+        res.on('data', c => (d += c));
+        res.on('end', () => {
+          let j = null;
+          try {
+            j = d ? JSON.parse(d) : {};
+          } catch (e) {
+            j = { error: d.slice(0, 200) };
+          }
+          resolve({ status: res.statusCode, body: j });
+        });
+      },
+    );
+    req.on('error', e => resolve({ status: 0, error: e.message }));
+    req.setTimeout(Buffer.isBuffer(body) ? 60000 : 20000, () => req.destroy(new Error('timeout')));
+    if (data) req.write(data);
+    req.end();
+  });
+}
+const callsPath = () => `/api/boards/${encodeURIComponent(BOARD)}/calls`;
+
+const FILE_TYPES = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+  '.csv': 'text/csv',
+  '.txt': 'text/plain',
+  '.pdf': 'application/pdf',
+};
+async function uploadAttachments(args, dryRun = args.dry_run) {
+  if (args.attachments === undefined) return args;
+  if (!Array.isArray(args.attachments)) throw new Error('attachments must be a list of file paths or ids');
+  const entries = [];
+  for (const file of args.attachments) {
+    try {
+      if (typeof file !== 'string' || !file) throw new Error('expected a file path or attachment id');
+      if (/^[a-f0-9]{16}$/.test(file)) {
+        entries.push({ id: file });
+        continue;
+      }
+      if (dryRun || shadowNow())
+        throw new Error('local files cannot upload in a dry run or shadow session; use an existing attachment id');
+      const type = FILE_TYPES[path.extname(file).toLowerCase()];
+      if (!type) throw new Error('unsupported file type (png, jpg, jpeg, gif, webp, svg, csv, txt or pdf only)');
+      const info = fs.statSync(file);
+      if (!info.isFile()) throw new Error('not a readable file');
+      if (info.size > 10 * 1024 * 1024) throw new Error('over 10 MB');
+      const data = fs.readFileSync(file);
+      if (data.length > 10 * 1024 * 1024) throw new Error('over 10 MB');
+      entries.push({ file, type, data });
+    } catch (e) {
+      throw new Error('Attachment ' + JSON.stringify(file) + ' could not be sent: ' + e.message);
+    }
+  }
+  const attachments = [];
+  for (const entry of entries) {
+    if (entry.id) {
+      attachments.push(entry.id);
+      continue;
+    }
+    const result = await request('POST', '/api/attachments', entry.data, {
+      'Content-Type': entry.type,
+      'X-Name': encodeURIComponent(path.basename(entry.file)),
+    });
+    if (result.status !== 201 || !result.body || !/^[a-f0-9]{16}$/.test(result.body.id || ''))
+      throw new Error(
+        'Attachment ' +
+          JSON.stringify(entry.file) +
+          ' could not be sent: ' +
+          ((result.body && result.body.error) || result.error || 'upload refused') +
+          ' (HTTP ' +
+          result.status +
+          ')',
+      );
+    attachments.push(result.body.id);
+  }
+  return Object.assign({}, args, { attachments });
+}
+
+// ---------- the queue: calls the board did not receive, sent in order when it is back ----------
+const readLines = f => {
+  try {
+    return fs
+      .readFileSync(f, 'utf8')
+      .split('\n')
+      .filter(Boolean)
+      .map(l => {
+        try {
+          return JSON.parse(l);
+        } catch (e) {
+          return null;
+        }
+      })
+      .filter(Boolean);
+  } catch (e) {
+    return [];
+  }
+};
+const writeLines = (f, items) => {
+  const tmp = f + '.tmp.' + process.pid;
+  fs.writeFileSync(tmp, items.map(x => JSON.stringify(x)).join('\n') + (items.length ? '\n' : ''));
+  fs.renameSync(tmp, f);
+};
+const queued = () => readLines(QUEUE);
+const LOCK = QUEUE + '.lock';
+// One process at a time reads and rewrites a file here (two sessions in one home must not lose each other's calls). The
+// lock is held only for the read-modify-write, never across a request to the board, so it never goes stale while held.
+async function locked(fn) {
+  for (let i = 0; i < 100; i++) {
+    try {
+      const fd = fs.openSync(LOCK, 'wx');
+      fs.writeSync(fd, String(process.pid));
+      fs.closeSync(fd);
+      break;
+    } catch (e) {
+      try {
+        if (Date.now() - fs.statSync(LOCK).mtimeMs > 10000) fs.unlinkSync(LOCK);
+      } catch (e2) {}
+      await new Promise(r => setTimeout(r, 50));
+    }
+    if (i === 99) throw new Error('the call outbox is locked by another process');
+  }
+  try {
+    return await fn();
+  } finally {
+    try {
+      fs.unlinkSync(LOCK);
+    } catch (e) {}
+  }
+}
+const appendTo = (f, item) => locked(async () => writeLines(f, readLines(f).concat([item])));
+const removeFrom = (f, id) =>
+  locked(async () =>
+    writeLines(
+      f,
+      readLines(f).filter(x => x.id !== id),
+    ),
+  );
+let draining = false;
+async function drain() {
+  // in order; a call the board answered (applied, or refused and recorded by it as undelivered) leaves the queue
+  if (draining) return;
+  draining = true;
+  try {
+    for (const rr of readLines(RESULTS)) {
+      // first the deliveries the board has not heard about
+      const r = await request('POST', callsPath(), {
+        calls: [{ id: rr.id, tool: '_relay_result', args: rr.args, sent_at: new Date().toISOString() }],
+      });
+      if (r.status === 0 || r.status >= 500) return;
+      await removeFrom(RESULTS, rr.id);
+    }
+    for (;;) {
+      const item = queued()[0];
+      if (!item) break;
+      const r = await request('POST', callsPath(), {
+        calls: [Object.assign({}, item, { queued: true, sent_at: new Date().toISOString() })],
+      });
+      if (r.status === 0 || r.status >= 500) break; // still away: keep the order, try later
+      if (r.status >= 400)
+        await appendTo(DEAD, {
+          id: item.id,
+          t: new Date().toISOString(),
+          status: r.status,
+          error: String((r.body && r.body.error) || '').slice(0, 300),
+          tool: item.tool,
+          args: item.args,
+          client_at: item.client_at,
+          told: false,
+        }); // the route refused it: kept and told, never dropped
+      await removeFrom(QUEUE, item.id);
+    }
+  } finally {
+    draining = false;
+  }
+}
+async function untold() {
+  // queued calls a board route refused, told once in the next answer
+  const dead = readLines(DEAD).filter(x => !x.told);
+  if (!dead.length) return '';
+  await locked(async () =>
+    writeLines(
+      DEAD,
+      readLines(DEAD).map(x => Object.assign(x, { told: true })),
+    ),
+  );
+  return (
+    `\n\nQUEUE: ${dead.length} queued call${dead.length > 1 ? 's were' : ' was'} refused by the board before it was ` +
+    `read (${dead.map(x => `${x.tool} queued ${x.client_at}: ${x.status} ${x.error}`).join('; ')}). ` +
+    `Nothing of ${dead.length > 1 ? 'them' : 'it'} is on the board; redo what still matters. ` +
+    'Kept in calls-undelivered.jsonl.'
+  );
+}
+setInterval(() => {
+  drain().catch(() => {});
+}, 30000).unref();
+
+// ---------- the relay: authorised by the board, which issues a single-use ticket with the exact text ----------
+// read at every relay, as the key is read at every call: a session that started in shadow would otherwise go on
+// dry-running its relays after the switch to tool mode, until it restarted
+const shadowNow = () => process.env.LH_SHADOW === '1' || !!CFG.shadow || fs.existsSync(SHADOW_FILE);
+const SHADOW = shadowNow(); // for the one-shot commands below (check, the hooks), each a process of its own
+// relay.sh runs under Git for Windows' bash, as every kit script does. A bare "bash" from a process the Claude app
+// started finds C:\Windows\System32\bash.exe first, which is WSL's: it reads the script's Windows path as a shell would
+// and loses its backslashes. The paths go with forward slashes, which Git's bash reads as given
+const fwd = p => String(p).replace(/\\/g, '/');
+let BASH = null;
+function bashExe() {
+  if (BASH) return BASH;
+  if (process.platform !== 'win32') return (BASH = 'bash');
+  const tried = [process.env.LH_BASH, process.env.CLAUDE_CODE_GIT_BASH_PATH];
+  try {
+    for (const g of String(spawnSync('where', ['git'], { encoding: 'utf8', windowsHide: true }).stdout || '')
+      .split(/\r?\n/)
+      .filter(Boolean))
+      tried.push(path.join(path.dirname(path.dirname(g)), 'bin', 'bash.exe'));
+  } catch (e) {}
+  for (const root of [
+    process.env.ProgramFiles,
+    process.env['ProgramFiles(x86)'],
+    process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'Programs'),
+  ])
+    if (root) tried.push(path.join(root, 'Git', 'bin', 'bash.exe'));
+  return (BASH =
+    tried.find(p => p && !/[\\/]system32[\\/]|[\\/]WindowsApps[\\/]/i.test(p) && fs.existsSync(p)) || 'bash');
+}
+async function relay(args) {
+  // a shadow session's relay is a dry run: the board checks it and records it for the trial, and nothing is sent
+  const inShadow = shadowNow();
+  if (inShadow) args = Object.assign({}, args, { dry_run: true });
+  const r = await request('POST', callsPath(), {
+    calls: [{ id: crypto.randomUUID(), tool: 'board_relay', args, sent_at: new Date().toISOString() }],
+  });
+  if (r.status === 0 || r.status >= 500)
+    return {
+      isError: true,
+      text:
+        `The board is out of reach (${scrub(r.error || r.status)}). ` +
+        'A relay is never queued: nothing was sent. Try again when the board is back.',
+    };
+  const res = (r.body && r.body.results && r.body.results[0]) || {};
+  if (!res.ok) return { isError: true, text: scrub(res.reason || (r.body && r.body.error) || 'refused') };
+  // a dry run carries no ticket: it was checked before the ticket test, or every dry run read as refused
+  if (args.dry_run)
+    return {
+      isError: false,
+      text: scrub(
+        res.summary +
+          (inShadow ? '\nSHADOW: nothing was relayed; your lines and relay.sh still do that.' : '') +
+          '\n\n' +
+          (r.body.receipt || ''),
+      ),
+    };
+  if (!r.body.ticket) return { isError: true, text: 'The board gave no relay ticket; nothing was sent.' };
+  const tk = r.body.ticket;
+  if (crypto.createHash('sha256').update(tk.text).digest('hex') !== tk.hash)
+    return { isError: true, text: 'The relay ticket did not check out; nothing was sent.' };
+  // one file per relay: concurrent relays never send each other's text
+  const f = path.join(HERE, 'inbox', `relay-${tk.id}.txt`);
+  fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, tk.text);
+  const env = {
+    PATH: process.env.PATH,
+    HOME: process.env.HOME,
+    USERPROFILE: process.env.USERPROFILE,
+    SYSTEMROOT: process.env.SYSTEMROOT,
+  }; // no token in the relay's environment
+  const sh = spawnSync(
+    bashExe(),
+    [fwd(path.join(HERE, 'relay.sh'))].concat(tk.again ? ['--again'] : [], [tk.to, fwd(f)]),
+    { encoding: 'utf8', timeout: 60000, env },
+  ); // arguments, never a shell string
+  const delivered = sh.status === 0,
+    detail = scrub(((sh.stdout || '') + (sh.stderr || '')).trim().slice(-400));
+  try {
+    fs.unlinkSync(f);
+  } catch (e) {}
+  // one id per ticket: a retry is recognised, never recorded twice
+  const rr = { id: 'relay-result-' + tk.id, args: { ticket: tk.id, delivered, detail } };
+  const r2 = await request('POST', callsPath(), {
+    calls: [{ id: rr.id, tool: '_relay_result', args: rr.args, sent_at: new Date().toISOString() }],
+  });
+  const heard = !(r2.status === 0 || r2.status >= 500);
+  // kept until the board hears it, so the board never shows a delivered relay as unsent
+  if (!heard) await appendTo(RESULTS, rr);
+  const res2 = (r2.body && r2.body.results && r2.body.results[0]) || {};
+  if (!delivered) return { isError: true, text: `relay.sh did not deliver to the ${tk.to}: ${detail || 'no detail'}` };
+  return {
+    isError: false,
+    text: scrub(
+      `${
+        heard
+          ? res2.summary || 'Relayed.'
+          : 'Delivered. The board did not hear the result yet; it is kept and goes when the board is back. ' +
+            'Do not relay it again.'
+      }` + `\n\n${(r2.body && r2.body.receipt) || ''}`,
+    ),
+  };
+}
+
+// ---------- one call ----------
+async function call(tool, args) {
+  const spec = SPEC.tools.find(t => t.name === tool);
+  if (!spec)
+    return {
+      isError: true,
+      text: `There is no tool ${tool}. The tools are: ${SPEC.tools.map(t => t.name).join(', ')}.`,
+    };
+  const size = Buffer.byteLength(JSON.stringify(args || {}));
+  if (size > MAX_ARGS)
+    return {
+      isError: true,
+      text:
+        `The call is ${Math.round(size / 1024)} KB; the board takes up to ${MAX_ARGS / 1024} KB. ` +
+        'Shorten it, or put the long part in a file and attach it.',
+    };
+  if (tool === 'board_relay') return relay(args || {});
+  if (tool === 'board_post' || tool === 'board_reply' || tool === 'board_batch') {
+    try {
+      if (tool === 'board_batch' && Array.isArray(args?.calls)) {
+        const calls = [];
+        for (const entry of args.calls) {
+          if (entry && (entry.tool === 'board_post' || entry.tool === 'board_reply')) {
+            const uploaded = await uploadAttachments(entry.args || {}, args.dry_run || entry.args?.dry_run);
+            calls.push({ ...entry, args: uploaded });
+          } else calls.push(entry);
+        }
+        args = { ...args, calls };
+      } else args = await uploadAttachments(args || {});
+    } catch (e) {
+      return { isError: true, text: scrub(e.message) };
+    }
+  }
+  const id = crypto.randomUUID();
+  const item = { id, tool, args: args || {}, client_at: new Date().toISOString() };
+  await drain().catch(() => {});
+  const told = await untold().catch(() => '');
+  if (queued().length && tool !== 'board_status') {
+    await appendTo(QUEUE, item);
+    return { isError: false, text: `Queued behind earlier calls (they go in order). Call id ${id}.${told}` };
+  }
+  let r;
+  for (let tries = 0; ; tries++) {
+    // to: "chat" waits for the collector to report his words: a few short retries here, never a wait on the board
+    r = await request('POST', callsPath(), { calls: [Object.assign({}, item, { sent_at: new Date().toISOString() })] });
+    const rs = (r.body && r.body.results && r.body.results[0]) || {};
+    if (!(rs.ok === false && rs.retry && tries < 3)) break;
+    await new Promise(res => setTimeout(res, rs.retry * 1000));
+  }
+  if (r.status === 0 || r.status >= 500) {
+    if (tool === 'board_status')
+      return { isError: true, text: `The board is out of reach (${scrub(r.error || r.status)}).${told}` };
+    await appendTo(QUEUE, item);
+    return {
+      isError: false,
+      text:
+        `The board is out of reach (${scrub(r.error || r.status)}). Queued as ${id}; it goes when the board is back, ` +
+        `and the board will tell you if it refuses it then. Nothing to repeat.${told}`,
+    };
+  }
+  const res = (r.body && r.body.results && r.body.results[0]) || {};
+  const receipt = ((r.body && r.body.receipt) || '') + told;
+  if (r.status >= 400 || res.ok === false)
+    return {
+      isError: true,
+      text: scrub(`${res.reason || (r.body && r.body.error) || 'refused'}${receipt ? '\n\n' + receipt : ''}`),
+    };
+  if (tool === 'board_handoff' && r.body.handoff && !(args || {}).dry_run) {
+    fs.writeFileSync(path.join(HERE, 'handoff.md'), r.body.handoff);
+  }
+  const rules =
+    tool === 'board_shift' && args && args.action === 'compacted'
+      ? '\n\nRULES\n' +
+        (SPEC.instructions || '') +
+        (res.pickup && res.pickup.note
+          ? '\n\nYOUR PICKUP NOTE (' + (res.pickup.noteAt || res.pickup.t) + ')\n' + res.pickup.note
+          : '\n\nNo pickup note was written before this compaction: read board_status(detail: "full").')
+      : '';
+  return {
+    isError: false,
+    text: scrub(
+      `${res.summary || 'done'}${tool === 'board_handoff' ? ' Written to handoff.md in your home.' : ''}` +
+        `${receipt ? '\n\n' + receipt : ''}${rules}`,
+    ),
+  };
+}
+
+// ---------- the switch: registration, hooks (docs/tool-calls.md §3, §9) ----------
+const SELF = path.join(HERE, 'lighthouse-mcp.cjs').replace(/\\/g, '/');
+const fold = p => path.resolve(String(p)).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+const claudeJson = () => path.join(process.env.CLAUDE_CONFIG_DIR || os.homedir(), '.claude.json');
+const hookCmd = kind => `node "${SELF}" hook ${kind}`;
+const isOurs = h => (h.hooks || []).some(x => /lighthouse-mcp\.cjs"? hook /.test(String(x.command || '')));
+function sessionFolder(argv) {
+  // the folder the operator's session runs in: named, or found by its transcript folder's name in Claude Code's own
+  // list
+  const i = argv.indexOf('--project');
+  if (i >= 0 && argv[i + 1]) return { dir: path.resolve(argv[i + 1]) };
+  if (SESSION_DIR) return { dir: SESSION_DIR }; // the setting names it
+  let cj;
+  try {
+    cj = JSON.parse(fs.readFileSync(claudeJson(), 'utf8'));
+  } catch (e) {
+    return { err: `cannot read ${claudeJson()} (${e.message}); name the folder with --project` };
+  }
+  const want = path.basename(String(TRANSCRIPTS).replace(/[\\/]+$/, '')).toLowerCase();
+  // one folder can be listed twice, once with \ and once with / (an older Claude Code wrote \): one folder
+  const hits = [
+    ...new Map(
+      Object.keys(cj.projects || {})
+        .filter(k => k.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() === want)
+        .map(k => [fold(k), k]),
+    ).values(),
+  ];
+  if (hits.length !== 1)
+    return {
+      err:
+        `${hits.length ? 'several' : 'no'} session folder${hits.length ? 's' : ''} in Claude Code's list ` +
+        `match${hits.length ? '' : 'es'} the transcript folder ${want}; name it with --project`,
+    };
+  return { dir: path.resolve(hits[0]) };
+}
+function check(argv) {
+  const sf = sessionFolder(argv);
+  if (sf.err) {
+    console.log('tools: ' + sf.err);
+    return 3;
+  }
+  const problems = [];
+  let cj = {};
+  try {
+    cj = JSON.parse(fs.readFileSync(claudeJson(), 'utf8'));
+  } catch (e) {
+    problems.push(`cannot read ${claudeJson()}`);
+  }
+  // the registered file is compared by its real path: a short name (OWNERL~1) and the long one are the same file
+  const real = p => {
+    try {
+      return fold(fs.realpathSync.native(p));
+    } catch (e) {
+      return fold(p);
+    }
+  };
+  const mine = s =>
+    !!s &&
+    [s.command]
+      .concat(s.args || [])
+      .some(a => /lighthouse-mcp\.cjs$/i.test(String(a)) && real(String(a)) === real(SELF));
+  // every spelling of the folder is read: registered under any of them counts (current Claude Code writes the / one)
+  const local = Object.keys(cj.projects || {})
+    .filter(k => fold(k) === fold(sf.dir))
+    .map(k => (cj.projects[k].mcpServers || {}).lighthouse)
+    .filter(Boolean)
+    .sort((x, y) => (mine(y) ? 1 : 0) - (mine(x) ? 1 : 0))[0];
+  if (!mine(local))
+    problems.push(
+      `the lighthouse tools are not registered at local scope for ${sf.dir}` +
+        `${local ? ' (a registration there runs another file)' : ''}. ` +
+        `In that folder: claude mcp add --scope local lighthouse -- node "${SELF}"`,
+    );
+  if ((cj.mcpServers || {}).lighthouse)
+    problems.push(
+      'lighthouse is also registered at user scope, so firstmate and every other session of this user get the tools: ' +
+        'claude mcp remove --scope user lighthouse',
+    );
+  let st = {};
+  try {
+    st = JSON.parse(fs.readFileSync(path.join(sf.dir, '.claude', 'settings.local.json'), 'utf8'));
+  } catch (e) {}
+  for (const ev of ['PreCompact', 'SessionStart'])
+    if (!((st.hooks || {})[ev] || []).some(isOurs))
+      problems.push(
+        `the ${ev} hook is missing: node "${SELF}" install-hooks --project "${sf.dir.replace(/\\/g, '/')}"`,
+      );
+  if (problems.length) {
+    console.log('tools: NOT READY\n' + problems.map(p => '  - ' + p).join('\n'));
+    return 3;
+  }
+  console.log(
+    `tools: registered at local scope for ${sf.dir}; hooks in place${SHADOW ? '; SHADOW (dry runs only)' : ''}. ` +
+      'A session started before the registration has no tools: restart it.',
+  );
+  return 0;
+}
+// Is the session that runs this writing in the configured folder? shift.sh start runs it from the operator's own
+// session, whose command has just been written to its transcript; nothing written there means the session runs in
+// another folder, where the collector cannot read its lines and its tools may not be registered, though `check` is
+// green for the configured one
+function here() {
+  let newest = 0,
+    name = null;
+  try {
+    for (const f of fs.readdirSync(TRANSCRIPT_DIR))
+      if (f.endsWith('.jsonl')) {
+        const m = fs.statSync(path.join(TRANSCRIPT_DIR, f)).mtimeMs;
+        if (m > newest) {
+          newest = m;
+          name = f;
+        }
+      }
+  } catch (e) {}
+  const age = Date.now() - newest,
+    where = SESSION_DIR || `the folder ${path.basename(TRANSCRIPT_DIR)} encodes`;
+  if (!name || age > 180000) {
+    console.log(
+      `session: NOT HERE: nothing has written to ${TRANSCRIPT_DIR} in the last 3 minutes` +
+        `${name ? ` (its newest, ${name}, ${Math.round(age / 60000)} min ago)` : ''}. ` +
+        'This session seems to run in another folder, where the collector cannot read it. ' +
+        `Start the operator in ${where}, or set __OPERATOR_TRANSCRIPT_DIR__ to this session's folder and run ` +
+        'shift.sh update (SETUP.md, "Moving an operator to a new folder").',
+    );
+    return 4;
+  }
+  console.log(`session: here (${name}, written ${Math.round(age / 1000)} s ago)`);
+  return 0;
+}
+function installHooks(argv) {
+  // only this home's two hooks are added or replaced; everything else in the file is kept as it was
+  const sf = sessionFolder(argv);
+  if (sf.err) {
+    console.log(sf.err);
+    return 2;
+  }
+  const f = path.join(sf.dir, '.claude', 'settings.local.json');
+  let st = {};
+  if (fs.existsSync(f)) {
+    try {
+      st = JSON.parse(fs.readFileSync(f, 'utf8'));
+    } catch (e) {
+      console.log(`${f} is not valid JSON; fix it by hand first (nothing written)`);
+      return 2;
+    }
+  }
+  st.hooks = st.hooks || {};
+  st.hooks.PreCompact = (st.hooks.PreCompact || [])
+    .filter(h => !isOurs(h))
+    .concat([{ hooks: [{ type: 'command', command: hookCmd('precompact') }] }]);
+  st.hooks.SessionStart = (st.hooks.SessionStart || [])
+    .filter(h => !isOurs(h))
+    .concat([{ matcher: 'compact', hooks: [{ type: 'command', command: hookCmd('sessionstart') }] }]);
+  fs.mkdirSync(path.dirname(f), { recursive: true });
+  const tmp = f + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(st, null, 2) + '\n');
+  fs.renameSync(tmp, f);
+  console.log(
+    `hooks written to ${f}: PreCompact marks the compaction on the board; ` +
+      'SessionStart (after a compaction) puts the rules back in front of the operator. ' +
+      'They take effect in the next session.',
+  );
+  return 0;
+}
+async function hook(kind) {
+  // never blocks a compaction or a start: always exit 0
+  let ev = {};
+  try {
+    ev = JSON.parse(fs.readFileSync(0, 'utf8') || '{}');
+  } catch (e) {}
+  if (kind === 'precompact') {
+    // a shadow session is on a line-mode board, where the collector marks the compaction
+    if (!SHADOW) {
+      const r = await call('board_shift', { action: 'compacting' }).catch(e => ({ text: e.message }));
+      process.stderr.write('lighthouse: ' + String(r.text).split('\n')[0] + '\n');
+    }
+    return 0;
+  }
+  if (kind === 'sessionstart' && (!ev.source || ev.source === 'compact')) {
+    console.log(
+      SHADOW
+        ? 'LIGHTHOUSE, after a compaction (SHADOW TRIAL): the summary kept your work and dropped your manners. ' +
+            'Your timed lines are still what answer the captain on this board: ' +
+            'read OPERATOR-BRIEF.md again before you ' +
+            'write one. Alongside each act, make the matching lighthouse tool call; it only dry-runs.\n\nTHE TOOLS\n' +
+            (SPEC.instructions || '')
+        : 'LIGHTHOUSE, after a compaction: the summary kept your work and dropped your manners. ' +
+            'Before anything else call board_shift(action: "compacted"): it returns the full picture and your ' +
+            'pickup note.\n\nRULES\n' +
+            (SPEC.instructions || ''),
+    );
+  }
+  return 0;
+}
+
+// ---------- MCP over stdio ----------
+const out = msg => process.stdout.write(JSON.stringify(msg) + '\n');
+async function onMessage(msg) {
+  const { id, method, params } = msg;
+  if (method === 'initialize')
+    return out({
+      jsonrpc: '2.0',
+      id,
+      result: {
+        protocolVersion: (params && params.protocolVersion) || '2025-06-18',
+        capabilities: { tools: {} },
+        serverInfo: { name: 'lighthouse', version: SPEC.version || '0' },
+        instructions: SPEC.instructions || '',
+      },
+    });
+  if (method === 'notifications/initialized' || (method && method.startsWith('notifications/'))) return;
+  if (method === 'ping') return out({ jsonrpc: '2.0', id, result: {} });
+  if (method === 'tools/list')
+    return out({
+      jsonrpc: '2.0',
+      id,
+      result: {
+        tools: SPEC.tools.map(t => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })),
+      },
+    });
+  if (method === 'tools/call') {
+    let r;
+    try {
+      r = await call(params && params.name, (params && params.arguments) || {});
+    } catch (e) {
+      r = { isError: true, text: scrub('The tool failed: ' + e.message) };
+    }
+    return out({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: r.text }], isError: !!r.isError } });
+  }
+  if (id !== undefined) out({ jsonrpc: '2.0', id, error: { code: -32601, message: 'unknown method ' + method } });
+}
+
+if (process.argv[2] === 'call') {
+  let args = {};
+  try {
+    args = process.argv[4] ? JSON.parse(process.argv[4]) : {};
+  } catch (e) {
+    console.error('the arguments must be JSON');
+    process.exit(2);
+  }
+  call(process.argv[3], args).then(r => {
+    console.log(r.text);
+    process.exit(r.isError ? 1 : 0);
+  });
+} else if (process.argv[2] === 'check') {
+  process.exit(check(process.argv.slice(3)));
+} else if (process.argv[2] === 'here') {
+  process.exit(here());
+} else if (process.argv[2] === 'install-hooks') {
+  process.exit(installHooks(process.argv.slice(3)));
+} else if (process.argv[2] === 'hook') {
+  hook(process.argv[3])
+    .catch(() => 0)
+    .then(() => process.exit(0));
+} else {
+  let buf = '';
+  process.stdin.setEncoding('utf8');
+  process.stdin.on('data', d => {
+    buf += d;
+    let i;
+    while ((i = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, i).trim();
+      buf = buf.slice(i + 1);
+      if (!line) continue;
+      let msg;
+      try {
+        msg = JSON.parse(line);
+      } catch (e) {
+        continue;
+      }
+      onMessage(msg).catch(() => {});
+    }
+  });
+  process.stdin.on('end', () => process.exit(0));
+}

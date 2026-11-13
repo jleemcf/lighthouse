@@ -1,0 +1,32 @@
+---
+title: "No ends a prompt. Only approval can become delivery"
+---
+stateDiagram-v2
+  s0: Offered#59; waiting for a choice
+  s1: declined
+  s2: superseded
+  s3: Approved#59; not sent
+  s4: declined#59; card closed
+  s5: Delivery recorded
+  s6: superseded#59; card closed
+  s7: Approved#59; newer captain words are separate
+  s8: Approved#59; delivery ticket issued
+  [*] --> s0
+  s0 --> s1: captain chooses No
+  s0 --> s2: ask is replaced, withdrawn or settled
+  s0 --> s3: an approval is attempted
+  s1 --> s4: card closes
+  s2 --> s6: card closes
+  s3 --> s7: captain writes a separate instruction
+  s3 --> s8: board authorizes the exact words
+  s3 --> s5: operator reports delegated prompt delivery or ordinary line credits its captain source
+  s3 --> s6: card closes
+  s3 --> s2: ask is replaced, withdrawn or settled
+  s0 --> s7: an approval is attempted
+  s7 --> s5: operator reports delegated prompt delivery or tool reports delivery against its ticket
+  s7 --> s6: card closes
+  s8 --> s7: captain writes a separate instruction
+  s8 --> s5: operator reports delegated prompt delivery or tool reports delivery against its ticket or ordinary line credits its captain source
+  s8 --> s6: card closes
+  s8 --> s2: ask is replaced, withdrawn or settled
+  s7 --> s2: ask is replaced, withdrawn or settled

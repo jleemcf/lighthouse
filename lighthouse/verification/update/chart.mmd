@@ -1,0 +1,76 @@
+---
+title: "Kit update: stop before reporting an incomplete release as installed"
+---
+stateDiagram-v2
+  s0: current layout: ready
+  s1: heartbeat-only layout: ready
+  s2: old layout: ready
+  s3: current layout: failed
+  s4: heartbeat-only layout: failed
+  s5: old layout: failed
+  s6: current layout: resolving
+  s7: heartbeat-only layout: resolving
+  s8: old layout: resolving
+  s9: current layout: validating
+  s10: heartbeat-only layout: validating
+  s11: old layout: validating
+  s12: current layout: installing
+  s13: heartbeat-only layout: installing
+  s14: old layout: installing
+  s15: current layout: activating
+  s16: heartbeat-only layout: activating
+  s17: old layout: activating
+  s18: current layout: copying
+  s19: heartbeat-only layout: copying
+  s20: old layout: copying
+  s21: current layout: helpers
+  s22: heartbeat-only layout: helpers
+  s23: old layout: helpers
+  s24: current layout: finished (Windows new, WSL new)
+  s25: heartbeat-only layout: finished (Windows new, WSL new)
+  s26: old layout: finished (Windows new, WSL new)
+  [*] --> s0
+  [*] --> s1
+  [*] --> s2
+  s0 --> s3: command boundary fails#59; report partial state
+  s0 --> s6: refresh repository and resolve paths
+  s1 --> s4: command boundary fails#59; report partial state
+  s1 --> s7: refresh repository and resolve paths
+  s2 --> s5: command boundary fails#59; report partial state
+  s2 --> s8: refresh repository and resolve paths
+  s6 --> s3: command boundary fails#59; report partial state
+  s6 --> s9: resolve selected profile and installed settings
+  s7 --> s4: command boundary fails#59; report partial state
+  s7 --> s10: resolve selected profile and installed settings
+  s8 --> s5: command boundary fails#59; report partial state
+  s8 --> s11: resolve selected profile and installed settings
+  s9 --> s3: reject invalid generated syntax without touching the home
+  s9 --> s12: render literal values and validate all generated languages before home writes
+  s10 --> s4: reject invalid generated syntax without touching the home
+  s10 --> s13: render literal values and validate all generated languages before home writes
+  s11 --> s5: reject invalid generated syntax without touching the home
+  s11 --> s14: render literal values and validate all generated languages before home writes
+  s12 --> s15: installer writes scripts and target manifest
+  s12 --> s3: installer fails
+  s13 --> s16: installer writes scripts and target manifest
+  s13 --> s4: installer fails
+  s14 --> s17: installer writes scripts and target manifest
+  s14 --> s5: installer fails
+  s15 --> s18: activate pending scripts and verify Windows manifest
+  s15 --> s3: command boundary fails#59; report partial state
+  s16 --> s19: activate pending scripts and verify Windows manifest
+  s16 --> s4: command boundary fails#59; report partial state
+  s17 --> s20: activate pending scripts and verify Windows manifest
+  s17 --> s5: command boundary fails#59; report partial state
+  s18 --> s3: WSL copy or verification fails
+  s18 --> s21: copy, chmod and verify WSL scripts
+  s19 --> s4: WSL copy or verification fails
+  s19 --> s22: copy, chmod and verify WSL scripts
+  s20 --> s5: WSL copy or verification fails
+  s20 --> s23: copy, chmod and verify WSL scripts
+  s21 --> s3: command boundary fails#59; report partial state
+  s21 --> s24: helpers activated#59; report success
+  s22 --> s4: command boundary fails#59; report partial state
+  s22 --> s25: helpers activated#59; report success
+  s23 --> s5: command boundary fails#59; report partial state
+  s23 --> s26: helpers activated#59; report success

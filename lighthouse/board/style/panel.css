@@ -1,0 +1,108 @@
+/* ---- side panel ---- */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 32, 0.35);
+  z-index: 40;
+}
+.panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(560px, 100vw);
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  box-shadow: -8px 0 30px rgba(15, 23, 32, 0.25);
+  z-index: 50;
+  padding: 16px 18px 20px;
+  overflow-y: auto;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  animation: slidein 0.22s ease;
+}
+@keyframes slidein {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+/* The title and the context ride at the top while the panel scrolls. */
+.panel .p-top {
+  position: sticky;
+  top: -16px;
+  z-index: 3;
+  background: var(--surface);
+  margin: -16px -18px 10px;
+  padding: 16px 18px 8px;
+  border-bottom: 1px solid var(--line-2);
+}
+.panel .context-pin {
+  max-height: 32vh;
+  overflow-y: auto;
+  margin-top: 8px;
+}
+.panel .context-pin h5 {
+  margin: 0 0 4px;
+}
+.panel .p-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.panel .p-head h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  flex: 1;
+}
+.panel .close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  cursor: pointer;
+  color: var(--muted);
+}
+.jump {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: auto;
+  flex: none;
+}
+.jump button {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+.jump button:hover {
+  color: var(--ink);
+}
+.panel .p-head .jump {
+  margin-left: auto;
+  margin-right: 8px;
+}
+.lane-tag .jump {
+  margin-left: auto;
+}
+.lane-tag .jump button {
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+}

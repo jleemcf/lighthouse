@@ -1,0 +1,41 @@
+{
+  "port": 7700,
+  "bind": "127.0.0.1",
+  "profile": "core",
+  "ownerId": "owner",
+  "ownerName": "the captain",
+  "timeZone": "UTC",
+  "windowsTimeZone": "UTC",
+  "defaultBoard": "lighthouse",
+  "jevEnabled": false,
+  "enrollment": { "enabled": false },
+  "storeFile": "store.json",
+  "standingCards": [],
+  "cardDoorbells": [],
+  "archiveDir": "board-archive",
+  "trustTailscaleHeaders": false,
+  "tailscaleUsers": {},
+  "pushSubject": "mailto:captain@example.invalid",
+  "tokens": {
+    "<replace-with-browser-token>": {
+      "name": "owner",
+      "via": "page"
+    },
+    "<replace-with-operator-token>": {
+      "name": "operator-workstation",
+      "via": "api"
+    }
+  },
+  "boards": {
+    "lighthouse": {
+      "protocol": "tools",
+      "name": "Lighthouse",
+      "machine": "Example workstation",
+      "project": "example-project",
+      "access": {
+        "owner": "owner",
+        "operator-workstation": "operator"
+      }
+    }
+  }
+}

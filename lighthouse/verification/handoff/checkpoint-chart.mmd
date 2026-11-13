@@ -1,0 +1,22 @@
+---
+title: "Continuous shift through checkpoint and pickup"
+---
+stateDiagram-v2
+  state "Legend" as legend {
+    lg0: Breaks NoUnjustifiedHolds
+    lg1: Path to the NoUnjustifiedHolds bug
+  }
+  class lg0 breaks
+  class lg1 bugPath
+  s0: Original holder working
+  s1: Original holder draining
+  s2: Cancel retained new dispatch holds
+  [*] --> s0
+  s0 --> s1: prepare successor
+  s1 --> s1: unknown work remains
+  s1 --> s2: cancel before commit
+  classDef breaks fill:#ffecee,stroke:#e72e3b,stroke-width:2.5px,color:#cd2834
+  class s0 bugPath
+  class s1 bugPath
+  class s2 breaks
+  class s2 bugPath
